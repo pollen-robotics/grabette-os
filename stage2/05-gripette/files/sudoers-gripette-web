@@ -1,0 +1,3 @@
+# Exact command vectors the gripette web UI dispatches — no blanket
+# NOPASSWD, no bare systemctl (that's a root escalation via 'systemctl link').
+pollen ALL=(root) NOPASSWD: /usr/bin/systemctl restart gripette, /usr/bin/systemctl poweroff

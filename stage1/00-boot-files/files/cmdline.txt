@@ -1,0 +1,1 @@
+console=tty1 root=ROOTDEV rootfstype=ext4 fsck.repair=yes fsck.mode=force rootwait resize

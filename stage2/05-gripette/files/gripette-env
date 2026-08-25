@@ -1,0 +1,11 @@
+# Gripette persistent configuration — read by the systemd services
+# (EnvironmentFile=/etc/gripette/env).
+# GRIPPER_HAND=left|right is appended on first boot by
+# /usr/local/bin/gripette-hand-from-hostname (from the hostname).
+# GRIPPER_MOTOR*_OFFSET / _SIGN are appended per device by
+# packages/gripette/scripts/calibrate_zero_local.py.
+GRIPPER_CAMERA_MODE=video
+GRIPPER_STREAM_HZ=30
+GRIPPER_CAMERA_RESOLUTION_W=648
+GRIPPER_CAMERA_RESOLUTION_H=486
+GRIPPER_JPEG_QUALITY=70

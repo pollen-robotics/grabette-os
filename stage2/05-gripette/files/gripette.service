@@ -1,0 +1,33 @@
+# GripetteOS copy of grabette:packages/gripette/systemd/gripette.service,
+# adapted for the baked image: User=pollen, checkout at /home/pollen/grabette,
+# and ExecStartPre derives GRIPPER_HAND from the hostname on first start.
+# Keep in sync with the source unit when it changes.
+[Unit]
+Description=Gripette - gRPC motor+camera service
+After=network.target
+
+[Service]
+Type=simple
+User=pollen
+WorkingDirectory=/home/pollen/grabette
+# '+' runs the hand derivation as root (it writes /etc/gripette/env);
+# Restart=on-failure keeps retrying until the hostname says left or right.
+ExecStartPre=+/usr/local/bin/gripette-hand-from-hostname
+ExecStart=/home/pollen/grabette/.venv/bin/python -m gripette
+Restart=on-failure
+RestartSec=5
+# A wedged camera pipeline can hang shutdown paths; don't wait the default
+# 90 s before SIGKILL — the process holds nothing that survives it.
+TimeoutStopSec=15
+Environment=PYTHONUNBUFFERED=1
+# Don't write .pyc into the venv. Matches gripette-bluetooth.service so
+# whichever order the services hit a module first, neither leaves bytecode
+# caches behind that might conflict if their owners differ.
+Environment=PYTHONDONTWRITEBYTECODE=1
+# Per-gripette persistent config (GRIPPER_HAND, GRIPPER_MOTOR*_OFFSET, …).
+# GRIPPER_HAND is appended by gripette-hand-from-hostname, calibration
+# offsets by scripts/calibrate_zero_local.py.
+EnvironmentFile=-/etc/gripette/env
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,22 @@
+# GripetteOS copy of grabette:packages/gripette/systemd/gripette-web.service,
+# adapted for the baked image: User=pollen, checkout at /home/pollen/grabette.
+# Installed but NOT enabled by default: `sudo systemctl enable --now gripette-web`.
+# Keep in sync with the source unit when it changes.
+[Unit]
+Description=Gripette - status web UI
+After=network.target
+
+[Service]
+Type=simple
+User=pollen
+WorkingDirectory=/home/pollen/grabette
+ExecStart=/home/pollen/grabette/.venv/bin/python -m gripette.webui
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+# Same per-device config as the main service (GRIPPER_WEB_PORT, GRIPPER_PORT).
+EnvironmentFile=-/etc/gripette/env
+
+[Install]
+WantedBy=multi-user.target
