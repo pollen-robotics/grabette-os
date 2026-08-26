@@ -79,12 +79,26 @@ else
     ck "depthai in venv"                 ls -d $R/home/pollen/grabette/.venv/lib/python*/site-packages/depthai*
 fi
 
+# Writable /tmp for the chroot checks (systemd-analyze needs a working dir);
+# the image itself stays read-only.
+mount -t tmpfs tmpfs "$R/tmp" || echo "warn: no tmpfs on /tmp"
+
+echo "=== runtime checks (qemu chroot, read-only) ==="
+PY=/home/pollen/grabette/.venv/bin/python
+if [ "$VARIANT" = gripette ]; then MODS="gripette, gripette.bluetooth, gripette.webui, dbus, gi"; else MODS="grabette, grabette.bluetooth, dbus, gi"; fi
+ck "service entry modules import" \
+    chroot $R env PYTHONDONTWRITEBYTECODE=1 $PY -c "import ${MODS}"
+ck "on-device scripts parse on image python" \
+    chroot $R env PYTHONDONTWRITEBYTECODE=1 $PY -c "import ast,glob; [ast.parse(open(f).read(),f) for f in glob.glob('/home/pollen/grabette/packages/${VARIANT}/scripts/*.py')]"
+ck "systemd-analyze verify units" \
+    chroot $R systemd-analyze verify /etc/systemd/system/${VARIANT}.service /etc/systemd/system/${VARIANT}-bluetooth.service
+
 echo "=== hand-from-hostname behavior (via qemu chroot) ==="
 # binfmt_misc with the F flag lets us chroot into the aarch64 rootfs.
 # The rootfs is mounted ro — put tmpfs over /tmp and /etc/<variant> so the
 # script can write without touching the image.
 if [ "$VARIANT" = gripette ]; then EF=/etc/gripette/env; VAR=GRIPPER_HAND; else EF=/etc/grabette/env; VAR=GRABETTE_HAND; fi
-if mount -t tmpfs tmpfs "$R/tmp" && mount -t tmpfs tmpfs "$R/etc/${VARIANT}"; then
+if mount -t tmpfs tmpfs "$R/etc/${VARIANT}"; then
     printf '#!/bin/sh\necho %s-left\n' "$VARIANT" > "$R/tmp/hostname"
     chmod +x "$R/tmp/hostname"
     if chroot $R /bin/sh -c "PATH=/tmp:\$PATH /usr/local/bin/hand-from-hostname $EF $VAR" \
@@ -93,11 +107,12 @@ if mount -t tmpfs tmpfs "$R/tmp" && mount -t tmpfs tmpfs "$R/etc/${VARIANT}"; th
     else
         echo "FAIL: hand-from-hostname chroot test"; FAIL=1
     fi
-    umount "$R/etc/${VARIANT}" "$R/tmp"
+    umount "$R/etc/${VARIANT}"
 else
     echo "SKIP: tmpfs overlay for hand test"
 fi
 
+umount "$R/tmp" 2>/dev/null
 umount /mnt/vboot /mnt/vroot
 losetup -d "$LOOP"
 rm -rf /v/verify
