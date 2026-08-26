@@ -1,3 +1,5 @@
 IMG_NAME="grabetteos"
 TARGET_HOSTNAME=grabette
-STAGE_LIST="${BASE_DIR}/stage0 ${BASE_DIR}/stage1 ${BASE_DIR}/stage2 ${BASE_DIR}/stage-grabette"
+# BASE_DIR is set by build.sh before sourcing; build-docker.sh sources this
+# earlier without it (set -u), hence the fallback.
+STAGE_LIST="${BASE_DIR:-.}/stage0 ${BASE_DIR:-.}/stage1 ${BASE_DIR:-.}/stage2 ${BASE_DIR:-.}/stage-grabette"
