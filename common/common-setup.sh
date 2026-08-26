@@ -4,29 +4,18 @@
 # (persistent journal + fsck.mode=force cmdline), hand-from-hostname script,
 # BLE-only bluetooth, VERSION.txt.
 #
-# Needs from the environment: ROOTFS_DIR (pi-gen), GITHUB_TOKEN (contents:read
-# on pollen-robotics/grabette), GRABETTE_REF (branch/tag, default develop),
-# OS_VERSION (image version stamp, default dev).
+# Needs from the environment: ROOTFS_DIR (pi-gen), GRABETTE_REF (branch/tag,
+# default develop), OS_VERSION (image version stamp, default dev).
 # Needs from the sourcing script: OS_NAME (e.g. GripetteOS).
 
 COMMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GRABETTE_REF="${GRABETTE_REF:-develop}"
 
-if [ -z "${GITHUB_TOKEN}" ]; then
-    echo "ERROR: GITHUB_TOKEN is not set — needed to clone the private" \
-         "pollen-robotics/grabette repo." \
-         "Run: sudo -E GITHUB_TOKEN=... ./build.sh -c config.<variant>" >&2
-    exit 1
-fi
-
 echo "Cloning grabette (${GRABETTE_REF}) into the image..."
 rm -rf "${ROOTFS_DIR}/home/pollen/grabette"
 GIT_LFS_SKIP_SMUDGE=1 git clone --branch "${GRABETTE_REF}" --depth 1 \
-    "https://x-access-token:${GITHUB_TOKEN}@github.com/pollen-robotics/grabette.git" \
+    "https://github.com/pollen-robotics/grabette.git" \
     "${ROOTFS_DIR}/home/pollen/grabette"
-# Scrub the token from the baked .git/config.
-git -C "${ROOTFS_DIR}/home/pollen/grabette" remote set-url origin \
-    "https://github.com/pollen-robotics/grabette.git"
 
 echo "Installing persistent journald config..."
 install -d -m 0755 "${ROOTFS_DIR}/etc/systemd/journald.conf.d"

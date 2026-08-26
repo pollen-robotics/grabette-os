@@ -25,16 +25,18 @@ Quick sanity check on the device: `grabetteos_check` / `gripetteos_check`. Full 
 
 ## Building the images
 
-Pick a variant with `-c`. The build clones the private grabette repo into the image, so it needs a token with `contents:read` on `pollen-robotics/grabette`:
+Pick a variant with `-c`:
 
 ```bash
-sudo -E GITHUB_TOKEN=<token> GRABETTE_REF=develop ./build.sh -c config.grabette
-sudo -E GITHUB_TOKEN=<token> GRABETTE_REF=develop ./build.sh -c config.gripette
+GRABETTE_REF=develop ./build-docker.sh -c config.grabette
+GRABETTE_REF=develop ./build-docker.sh -c config.gripette
+# or natively, with qemu-user-static binfmt registered:
+sudo -E GRABETTE_REF=develop ./build.sh -c config.grabette
 ```
 
-The generated image lands in `deploy/`. `GRABETTE_REF` picks the monorepo branch/tag to bake (default `develop`). The token is used only at build time and scrubbed from the baked `.git/config`.
+The generated image lands in `deploy/`. `GRABETTE_REF` picks the monorepo branch/tag to bake (default `develop`), `OS_VERSION` stamps `VERSION.txt` (default `dev`).
 
-In CI, pushing a tag `vx.x.x` builds **both** images (matrix) and publishes them in one release (any other tag just leaves artifacts in Actions). The repository secret `GRABETTE_CLONE_TOKEN` must hold the grabette read token; `workflow_dispatch` accepts a `grabette_ref` input.
+In CI, pushing a tag `vx.x.x` builds **both** images (matrix) and publishes them in one release (any other tag just leaves artifacts in Actions); `workflow_dispatch` accepts a `grabette_ref` input. No secrets needed — the grabette repo is public.
 
 In summary, the layout relative to stock pi-gen:
 - `config`: shared configuration (user `pollen`, SSH on); `config.grabette` / `config.gripette`: per-variant `IMG_NAME`, `TARGET_HOSTNAME`, `STAGE_LIST`

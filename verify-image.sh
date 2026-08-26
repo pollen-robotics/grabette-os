@@ -39,7 +39,6 @@ ck "hand-from-hostname installed +x"     test -x $R/usr/local/bin/hand-from-host
 ck "monorepo checkout present"           test -f $R/home/pollen/grabette/pyproject.toml
 ck "venv python present"                 test -L $R/home/pollen/grabette/.venv/bin/python
 ck "venv uses system site-packages"      grep -q 'include-system-site-packages = true' $R/home/pollen/grabette/.venv/pyvenv.cfg
-ckno "no token left in .git/config"      grep -q 'x-access-token' $R/home/pollen/grabette/.git/config
 ck "bluetooth BLE-only"                  grep -q '^ControllerMode = le' $R/etc/bluetooth/main.conf
 ck "kernel pinned 6.18.33"               ls -d $R/lib/modules/6.18.33*
 ck "VERSION.txt"                         grep -q 'OS:' $R/home/pollen/VERSION.txt

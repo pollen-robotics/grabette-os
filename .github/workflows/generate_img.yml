@@ -39,9 +39,6 @@ jobs:
       - name: Build ${{ matrix.variant }} OS image
         run: sudo -E ./build.sh -c config.${{ matrix.variant }}
         env:
-          # Fine-grained PAT with contents:read on pollen-robotics/grabette —
-          # the workflow's default token cannot read a sibling private repo.
-          GITHUB_TOKEN: ${{ secrets.GRABETTE_CLONE_TOKEN }}
           GRABETTE_REF: ${{ inputs.grabette_ref || 'develop' }}
           OS_VERSION: ${{ env.TAG || 'dev' }}
 
