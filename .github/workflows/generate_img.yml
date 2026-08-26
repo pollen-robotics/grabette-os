@@ -13,7 +13,10 @@ on:
 
 jobs:
   build-image:
-    runs-on: ubuntu-latest
+    # Native arm64: build.sh's `arch-test -n arm64` succeeds, so the chroot runs
+    # without qemu emulation — the stage0/stage2 apt work is several times faster
+    # than on an x86 runner. Free for public repos.
+    runs-on: ubuntu-24.04-arm
     strategy:
       fail-fast: false
       matrix:
