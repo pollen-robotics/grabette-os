@@ -22,14 +22,5 @@ echo "Verifying imports (chroot-safe, touches no hardware)..."
 runuser -u pollen -- /home/pollen/grabette/.venv/bin/python \
     -c "import picamera2, serial, rustypot, gripette; print('all imports OK')"
 
-echo "Forcing BLE-only Bluetooth (ensure-ble-only equivalent)..."
-BT_CONF=/etc/bluetooth/main.conf
-grep -q '^\[General\]' "$BT_CONF" || printf '\n[General]\n' >> "$BT_CONF"
-if grep -Eq '^[#[:space:]]*ControllerMode' "$BT_CONF"; then
-    sed -i -E 's/^[#[:space:]]*ControllerMode.*/ControllerMode = le/' "$BT_CONF"
-else
-    sed -i '/^\[General\]/a ControllerMode = le' "$BT_CONF"
-fi
-
 echo "Enabling gripette services (web stays opt-in)..."
 systemctl enable gripette gripette-bluetooth

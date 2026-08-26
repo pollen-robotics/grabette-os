@@ -1,8 +1,10 @@
 #!/bin/bash
 
 # Grabette host-side setup. Shared work (grabette monorepo clone, crash
-# hardening, hand-from-hostname script) lives in common/common-setup.sh.
+# hardening, hand-from-hostname script, BLE-only, VERSION.txt) lives in
+# common/common-setup.sh.
 
+OS_NAME=GrabetteOS
 source "$(dirname "${BASH_SOURCE[0]}")/../../common/common-setup.sh"
 
 echo "Installing grabette boot config (i2c3/i2c4 angle-sensor overlays)..."
@@ -32,18 +34,11 @@ install -d -m 0755 "${ROOTFS_DIR}/etc/grabette"
 install -m 0644 files/grabette-env "${ROOTFS_DIR}/etc/grabette/env"
 
 echo "Installing poweroff sudoers (install-poweroff equivalent)..."
-install -d -m 0755 "${ROOTFS_DIR}/etc/sudoers.d"
 install -m 0440 files/sudoers-grabette-poweroff "${ROOTFS_DIR}/etc/sudoers.d/grabette-poweroff"
 # Fail the build if the sudoers file is malformed (a bad file locks out sudo).
 on_chroot <<- EOF
 	visudo -cf /etc/sudoers.d/grabette-poweroff
 EOF
-
-echo "Creating VERSION.txt..."
-rm -f "${ROOTFS_DIR}/home/pollen/VERSION.txt"
-echo "GrabetteOS: dev" > "${ROOTFS_DIR}/home/pollen/VERSION.txt"
-echo "Grabette ref: ${GRABETTE_REF}" >> "${ROOTFS_DIR}/home/pollen/VERSION.txt"
-echo "Created on: $(date '+%Y-%m-%d')" >> "${ROOTFS_DIR}/home/pollen/VERSION.txt"
 
 echo "Installing check script..."
 install -m 0755 files/grabetteos_check.sh "${ROOTFS_DIR}/usr/local/bin/grabetteos_check"

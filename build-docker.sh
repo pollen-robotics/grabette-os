@@ -140,6 +140,7 @@ time ${DOCKER} run \
   -e "GIT_HASH=${GIT_HASH}" \
   -e "GITHUB_TOKEN=${GITHUB_TOKEN:-}" \
   -e "GRABETTE_REF=${GRABETTE_REF:-}" \
+  -e "OS_VERSION=${OS_VERSION:-}" \
   $DOCKER_CMDLINE_POST \
   pi-gen \
   bash -e -o pipefail -c "

@@ -1,10 +1,13 @@
 # Shared host-side setup for both device stages (gripette, grabette).
 # Sourced by each stage's 00-run.sh — NOT executable on its own.
 # Does everything identical across variants: monorepo clone, crash hardening
-# (persistent journal + fsck.mode=force cmdline), hand-from-hostname script.
+# (persistent journal + fsck.mode=force cmdline), hand-from-hostname script,
+# BLE-only bluetooth, VERSION.txt.
 #
 # Needs from the environment: ROOTFS_DIR (pi-gen), GITHUB_TOKEN (contents:read
-# on pollen-robotics/grabette), GRABETTE_REF (branch/tag, default develop).
+# on pollen-robotics/grabette), GRABETTE_REF (branch/tag, default develop),
+# OS_VERSION (image version stamp, default dev).
+# Needs from the sourcing script: OS_NAME (e.g. GripetteOS).
 
 COMMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GRABETTE_REF="${GRABETTE_REF:-develop}"
@@ -40,3 +43,19 @@ install -m 0644 "${COMMON_DIR}/files/cmdline.txt" \
 echo "Installing hand-from-hostname script..."
 install -m 0755 "${COMMON_DIR}/files/hand-from-hostname" \
     "${ROOTFS_DIR}/usr/local/bin/hand-from-hostname"
+
+echo "Forcing BLE-only Bluetooth (ensure-ble-only equivalent)..."
+BT_CONF="${ROOTFS_DIR}/etc/bluetooth/main.conf"
+grep -q '^\[General\]' "$BT_CONF" || printf '\n[General]\n' >> "$BT_CONF"
+if grep -Eq '^[#[:space:]]*ControllerMode' "$BT_CONF"; then
+    sed -i -E 's/^[#[:space:]]*ControllerMode.*/ControllerMode = le/' "$BT_CONF"
+else
+    sed -i '/^\[General\]/a ControllerMode = le' "$BT_CONF"
+fi
+
+echo "Creating VERSION.txt..."
+{
+    echo "${OS_NAME}: ${OS_VERSION:-dev}"
+    echo "Grabette ref: ${GRABETTE_REF}"
+    echo "Created on: $(date '+%Y-%m-%d')"
+} > "${ROOTFS_DIR}/home/pollen/VERSION.txt"

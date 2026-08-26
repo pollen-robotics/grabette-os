@@ -30,13 +30,8 @@ jobs:
             gpg pigz xxd arch-test bmap-tools kmod
 
       - name: Set TAG environment variable from git tag
-        id: set_tag
-        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-
-      - name: Stamp the tag into the variant's VERSION.txt
         if: github.ref_type == 'tag'
-        run: |
-            sed -i "s/OS: dev/OS: ${{ env.TAG }}/g" stage-${{ matrix.variant }}/00-${{ matrix.variant }}/00-run.sh
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
       - name: Make build.sh executable
         run: chmod +x build.sh
@@ -48,6 +43,7 @@ jobs:
           # the workflow's default token cannot read a sibling private repo.
           GITHUB_TOKEN: ${{ secrets.GRABETTE_CLONE_TOKEN }}
           GRABETTE_REF: ${{ inputs.grabette_ref || 'develop' }}
+          OS_VERSION: ${{ env.TAG || 'dev' }}
 
       - name: Rename deploy files with tag
         if: github.ref_type == 'tag'
