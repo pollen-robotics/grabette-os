@@ -1,7 +1,6 @@
-IMG_NAME="gripetteos"
+# Shared base config — sourced first; pick a variant with ./build.sh -c config.gripette|config.grabette
 DISABLE_FIRST_BOOT_USER_RENAME=1
 FIRST_USER_NAME=pollen
 FIRST_USER_PASS=root
 ENABLE_SSH=1
-TARGET_HOSTNAME=gripette
 WPA_COUNTRY=US

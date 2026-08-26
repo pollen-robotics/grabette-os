@@ -1,10 +1,10 @@
-name: Generate Gripette OS Image
+name: Generate Grabette OS Images
 
 on:
   workflow_dispatch:
     inputs:
-      gripette_ref:
-        description: "grabette branch/tag to bake into the image"
+      grabette_ref:
+        description: "grabette branch/tag to bake into the images"
         required: false
         default: "develop"
   push:
@@ -14,6 +14,10 @@ on:
 jobs:
   build-image:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [gripette, grabette]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -29,21 +33,21 @@ jobs:
         id: set_tag
         run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
-      - name: Update stage2/05-gripette/00-run.sh to use TAG
+      - name: Stamp the tag into the variant's VERSION.txt
         if: github.ref_type == 'tag'
         run: |
-            sed -i "s/GripetteOS: dev/GripetteOS: ${{ env.TAG }}/g" stage2/05-gripette/00-run.sh
+            sed -i "s/OS: dev/OS: ${{ env.TAG }}/g" stage-${{ matrix.variant }}/00-${{ matrix.variant }}/00-run.sh
 
       - name: Make build.sh executable
         run: chmod +x build.sh
 
-      - name: Build Gripette OS image
-        run: sudo -E ./build.sh
+      - name: Build ${{ matrix.variant }} OS image
+        run: sudo -E ./build.sh -c config.${{ matrix.variant }}
         env:
           # Fine-grained PAT with contents:read on pollen-robotics/grabette —
           # the workflow's default token cannot read a sibling private repo.
           GITHUB_TOKEN: ${{ secrets.GRABETTE_CLONE_TOKEN }}
-          GRIPETTE_REF: ${{ inputs.gripette_ref || 'develop' }}
+          GRABETTE_REF: ${{ inputs.grabette_ref || 'develop' }}
 
       - name: Rename deploy files with tag
         if: github.ref_type == 'tag'
@@ -59,7 +63,7 @@ jobs:
       - name: Upload generated image
         uses: actions/upload-artifact@v7
         with:
-            name: gripetteos-image-${{ env.TAG || github.run_number }}
+            name: ${{ matrix.variant }}os-image-${{ env.TAG || github.run_number }}
             path: deploy/*
 
       - name: Release

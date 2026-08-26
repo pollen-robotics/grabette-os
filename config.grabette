@@ -1,0 +1,3 @@
+IMG_NAME="grabetteos"
+TARGET_HOSTNAME=grabette
+STAGE_LIST="${BASE_DIR}/stage0 ${BASE_DIR}/stage1 ${BASE_DIR}/stage2 ${BASE_DIR}/stage-grabette"

@@ -1,0 +1,26 @@
+# GrabetteOS copy of grabette:packages/grabette/systemd/grabette.service,
+# adapted for the baked image: User=pollen, checkout at /home/pollen/grabette,
+# and ExecStartPre derives GRABETTE_HAND from the hostname on first start.
+# Keep in sync with the source unit when it changes.
+[Unit]
+Description=Grabette - Robotic manipulation data collection service
+After=network.target
+
+[Service]
+Type=simple
+User=pollen
+WorkingDirectory=/home/pollen/grabette
+# '+' runs the hand derivation as root (it writes /etc/grabette/env);
+# Restart=on-failure keeps retrying until the hostname says left or right.
+ExecStartPre=+/usr/local/bin/hand-from-hostname /etc/grabette/env GRABETTE_HAND
+ExecStart=/home/pollen/grabette/.venv/bin/python -m grabette
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+# Per-device persistent config (GRABETTE_HAND, GRABETTE_*_SIGN, …).
+# GRABETTE_HAND is appended by hand-from-hostname. Leading '-' makes it
+# optional so the service still boots before first-start setup.
+EnvironmentFile=-/etc/grabette/env
+
+[Install]
+WantedBy=multi-user.target

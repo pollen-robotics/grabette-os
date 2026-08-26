@@ -1,37 +1,46 @@
-# Gripette OS
+# Grabette OS
 
-This repository builds a custom Raspberry Pi OS image (Pi Zero 2W, arm64) for the gripette, using pi-gen. It bakes in everything `make install-rpi` + `make install-systemd` from [grabette](https://github.com/pollen-robotics/grabette)/packages/gripette do by hand: apt dependencies, the uv workspace venv, UART on the PL011 (`dtoverlay=miniuart-bt`, no serial console), crash hardening (persistent journal, `fsck.mode=force`), BLE-only Bluetooth, and the `gripette` + `gripette-bluetooth` systemd services (enabled; `gripette-web` installed but opt-in). Modeled on [reachy-mini-os](https://github.com/pollen-robotics/reachy-mini-os).
+This repository builds the custom Raspberry Pi OS images (arm64) for the two devices of the [grabette](https://github.com/pollen-robotics/grabette) project, using pi-gen. Modeled on [reachy-mini-os](https://github.com/pollen-robotics/reachy-mini-os).
+
+| Image | Device | Bakes in |
+|---|---|---|
+| `grabetteos` | grabette (Pi 4) | apt deps (picamera2, ffmpeg, dbus/gi), uv workspace venv (`--extra rpi --extra ui --extra hf`), i2c3/i2c4 angle-sensor overlays, OAK-D udev rule, NTP pinned to a coordinated anycast service (multi-device recording sync), polkit WiFi scan/connect rules, poweroff sudoers, `grabette` + `grabette-bluetooth` services |
+| `gripetteos` | gripette (Pi Zero 2W) | apt deps (picamera2, dbus/gi), uv workspace venv (`--extra rpi`), UART on the PL011 (`dtoverlay=miniuart-bt`, no serial console) for the 1 Mbaud motor bus, web-UI sudoers, `gripette` + `gripette-bluetooth` services (`gripette-web` installed but opt-in) |
+
+Both images share: user `pollen`, the grabette monorepo clone at `/home/pollen/grabette`, crash hardening (persistent capped journal, `fsck.mode=force`), BLE-only Bluetooth, and HAND-from-hostname first-boot setup.
 
 ## Flashing a device
 
-Flash the image with Raspberry Pi Imager ("Use custom") and in the OS customisation settings:
+Flash the matching image with Raspberry Pi Imager ("Use custom") and in the OS customisation settings:
 
-- **Hostname: `gripette-left` or `gripette-right` — this is how the device learns which hand it is.** On first start, `gripette.service` derives `GRIPPER_HAND` from the hostname and writes it to `/etc/gripette/env`. Any other hostname makes the service fail with an explicit journal message until you fix the hostname (`sudo hostnamectl set-hostname gripette-left`) or set `GRIPPER_HAND` manually.
+- **Hostname: `<device>-left` or `<device>-right` (e.g. `grabette-left`, `gripette-right`) — this is how the device learns which hand it is.** On first start, the main service derives `GRABETTE_HAND`/`GRIPPER_HAND` from the hostname and writes it to `/etc/<device>/env`. Any other hostname makes the service fail with an explicit journal message until you fix the hostname (`sudo hostnamectl set-hostname grabette-left`) or set the variable manually.
 - **Username: leave it as `pollen`** (change only the password if you want). The image bakes services and the venv under `/home/pollen`; a renamed user breaks it.
 - WiFi and SSH: as usual.
 
-Per-device motor calibration stays a post-assembly step: `packages/gripette/scripts/calibrate_zero_local.py` appends the offsets to `/etc/gripette/env` (survives reboots; the hand script never rewrites that file).
+Per-device calibration stays a post-assembly step, appended to `/etc/<device>/env` or `~/.grabette/` (the hand script never rewrites those):
+- grabette: `packages/grabette/scripts/calibrate_angles.py` (angle sensors → `~/.grabette/angle_calibration.json`)
+- gripette: `packages/gripette/scripts/calibrate_zero_local.py` (motor offsets → `/etc/gripette/env`)
 
-Quick sanity check on the device: `gripetteos_check`. Full hardware diagnostic: `make -C ~/grabette/packages/gripette check`.
+Quick sanity check on the device: `grabetteos_check` / `gripetteos_check`. Full hardware diagnostic: `scripts/check_hardware.py` in the corresponding package (`make check` for gripette).
 
-## Building the image
+## Building the images
 
-The build clones the private grabette repo into the image, so it needs a token with `contents:read` on `pollen-robotics/grabette`:
+Pick a variant with `-c`. The build clones the private grabette repo into the image, so it needs a token with `contents:read` on `pollen-robotics/grabette`:
 
 ```bash
-sudo -E GITHUB_TOKEN=<token> GRIPETTE_REF=develop ./build.sh
+sudo -E GITHUB_TOKEN=<token> GRABETTE_REF=develop ./build.sh -c config.grabette
+sudo -E GITHUB_TOKEN=<token> GRABETTE_REF=develop ./build.sh -c config.gripette
 ```
 
-The generated image lands in `deploy/`. `GRIPETTE_REF` picks the grabette branch/tag to bake (default `develop`). The token is used only at build time and scrubbed from the baked `.git/config`.
+The generated image lands in `deploy/`. `GRABETTE_REF` picks the monorepo branch/tag to bake (default `develop`). The token is used only at build time and scrubbed from the baked `.git/config`.
 
-In CI, pushing a tag `vx.x.x` builds and publishes a release (any other tag just leaves artifacts in Actions). The repository secret `GRABETTE_CLONE_TOKEN` must hold the grabette read token; `workflow_dispatch` accepts a `gripette_ref` input.
+In CI, pushing a tag `vx.x.x` builds **both** images (matrix) and publishes them in one release (any other tag just leaves artifacts in Actions). The repository secret `GRABETTE_CLONE_TOKEN` must hold the grabette read token; `workflow_dispatch` accepts a `grabette_ref` input.
 
-In summary, the files modified relative to stock pi-gen are:
-- `config`: main configuration (user `pollen`, hostname `gripette`, SSH on)
-- `stage1/00-boot-files/files/config.txt`: `dtoverlay=miniuart-bt` + `enable_uart=1` (PL011 on the GPIO header for the 1 Mbaud motor bus)
-- `stage1/00-boot-files/files/cmdline.txt`: no serial console, `fsck.mode=force`
-- `stage0/00-configure-apt` + `stage0/02-firmware`: kernel pinned to 6.18.33 (6.18.34 broke BLE advertising, which gripette-bluetooth relies on — inherited from reachy-mini-os)
-- `stage2/05-gripette/*`: grabette clone, venv, services, hardening
+In summary, the layout relative to stock pi-gen:
+- `config`: shared configuration (user `pollen`, SSH on); `config.grabette` / `config.gripette`: per-variant `IMG_NAME`, `TARGET_HOSTNAME`, `STAGE_LIST`
+- `common/`: shared between variants — monorepo clone, hardened `cmdline.txt` (no serial console, `fsck.mode=force`), journald drop-in, `hand-from-hostname`
+- `stage-grabette/`, `stage-gripette/`: device stages (packages, boot `config.txt`, services, venv build); each carries `EXPORT_IMAGE`, so only the selected variant's image is exported
+- `stage0/00-configure-apt` + `stage0/02-firmware`: kernel pinned to 6.18.33 (6.18.34 broke BLE advertising, which both bluetooth services rely on — inherited from reachy-mini-os)
 
 The branch arm64 is used for sync with the main pi-gen repo.
 

@@ -1,0 +1,6 @@
+# Grabette persistent configuration — sourced by grabette.service via
+# EnvironmentFile=/etc/grabette/env.
+# GRABETTE_HAND=left|right is appended on first boot by
+# /usr/local/bin/hand-from-hostname (from the hostname).
+# GRABETTE_PROXIMAL_SIGN / GRABETTE_DISTAL_SIGN overrides may be appended
+# per device.

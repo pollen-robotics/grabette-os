@@ -1,0 +1,3 @@
+# Dashboard shutdown button (make install-poweroff equivalent) — exact
+# command vector only, no blanket NOPASSWD.
+pollen ALL=(root) NOPASSWD: /usr/bin/systemctl poweroff

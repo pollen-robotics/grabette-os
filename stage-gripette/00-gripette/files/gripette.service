@@ -12,7 +12,7 @@ User=pollen
 WorkingDirectory=/home/pollen/grabette
 # '+' runs the hand derivation as root (it writes /etc/gripette/env);
 # Restart=on-failure keeps retrying until the hostname says left or right.
-ExecStartPre=+/usr/local/bin/gripette-hand-from-hostname
+ExecStartPre=+/usr/local/bin/hand-from-hostname /etc/gripette/env GRIPPER_HAND
 ExecStart=/home/pollen/grabette/.venv/bin/python -m gripette
 Restart=on-failure
 RestartSec=5
@@ -25,7 +25,7 @@ Environment=PYTHONUNBUFFERED=1
 # caches behind that might conflict if their owners differ.
 Environment=PYTHONDONTWRITEBYTECODE=1
 # Per-gripette persistent config (GRIPPER_HAND, GRIPPER_MOTOR*_OFFSET, …).
-# GRIPPER_HAND is appended by gripette-hand-from-hostname, calibration
+# GRIPPER_HAND is appended by hand-from-hostname, calibration
 # offsets by scripts/calibrate_zero_local.py.
 EnvironmentFile=-/etc/gripette/env
 

@@ -139,7 +139,7 @@ time ${DOCKER} run \
   --volume "${CONFIG_FILE}":/config:ro \
   -e "GIT_HASH=${GIT_HASH}" \
   -e "GITHUB_TOKEN=${GITHUB_TOKEN:-}" \
-  -e "GRIPETTE_REF=${GRIPETTE_REF:-}" \
+  -e "GRABETTE_REF=${GRABETTE_REF:-}" \
   $DOCKER_CMDLINE_POST \
   pi-gen \
   bash -e -o pipefail -c "

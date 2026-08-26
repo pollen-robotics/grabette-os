@@ -1,0 +1,23 @@
+# GrabetteOS copy of grabette:packages/grabette/systemd/grabette-bluetooth.service,
+# adapted for the baked image: checkout at /home/pollen/grabette.
+# Keep in sync with the source unit when it changes.
+[Unit]
+Description=Grabette Bluetooth WiFi Setup
+After=bluetooth.target
+Requires=bluetooth.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pollen/grabette
+ExecStartPre=/usr/sbin/rfkill unblock bluetooth
+ExecStart=/home/pollen/grabette/.venv/bin/python -m grabette.bluetooth
+Restart=on-failure
+RestartSec=5
+User=root
+Environment=PYTHONUNBUFFERED=1
+# Runs as root: don't let it write root-owned .pyc caches into the
+# pollen-owned .venv.
+Environment=PYTHONDONTWRITEBYTECODE=1
+
+[Install]
+WantedBy=multi-user.target

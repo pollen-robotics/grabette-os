@@ -1,0 +1,22 @@
+#!/bin/sh -e
+# Usage: hand-from-hostname ENV_FILE VAR_NAME
+# Derives left/right from the hostname set in Raspberry Pi Imager
+# (<device>-left / <device>-right) and appends VAR_NAME=<hand> to ENV_FILE.
+# Runs as root from the device service's ExecStartPre on every start until it
+# has succeeded once; append-only so per-device calibration values in ENV_FILE
+# are never touched.
+ENV_FILE="$1"; VAR="$2"
+[ -n "$ENV_FILE" ] && [ -n "$VAR" ] || { echo "usage: $0 ENV_FILE VAR_NAME" >&2; exit 2; }
+grep -q "^${VAR}=" "$ENV_FILE" 2>/dev/null && exit 0
+case "$(hostname)" in
+  *left*)  HAND=left ;;
+  *right*) HAND=right ;;
+  *)
+    echo "hostname '$(hostname)' matches neither left nor right;" \
+         "set the hostname (Imager or 'sudo hostnamectl set-hostname <device>-left')" \
+         "or add ${VAR}=left|right to ${ENV_FILE}" >&2
+    exit 1 ;;
+esac
+mkdir -p "$(dirname "$ENV_FILE")"
+printf '%s=%s\n' "$VAR" "$HAND" >> "$ENV_FILE"
+echo "${VAR}=${HAND} (from hostname $(hostname))"
