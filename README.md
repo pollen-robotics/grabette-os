@@ -1,6 +1,6 @@
 # Grabette OS
 
-This repository builds the custom Raspberry Pi OS images (arm64) for the two devices of the [grabette](https://github.com/pollen-robotics/grabette) project, using pi-gen. Modeled on [reachy-mini-os](https://github.com/pollen-robotics/reachy-mini-os).
+This repository builds the custom Raspberry Pi OS images (arm64) for the two devices of the [grabette](https://github.com/pollen-robotics/grabette) project. It is a fork of [pi-gen](https://github.com/RPi-Distro/pi-gen) (`arm64` branch).
 
 | Image | Device | Bakes in |
 |---|---|---|
@@ -42,7 +42,8 @@ In summary, the layout relative to stock pi-gen:
 - `config`: shared configuration (user `pollen`, SSH on); `config.grabette` / `config.gripette`: per-variant `IMG_NAME`, `TARGET_HOSTNAME`, `STAGE_LIST`
 - `common/`: shared between variants — monorepo clone, hardened `cmdline.txt` (no serial console, `fsck.mode=force`), journald drop-in, `hand-from-hostname`
 - `stage-grabette/`, `stage-gripette/`: device stages (packages, boot `config.txt`, services, venv build); each carries `EXPORT_IMAGE`, so only the selected variant's image is exported
-- `stage0/00-configure-apt` + `stage0/02-firmware`: kernel pinned to 6.18.33 (6.18.34 broke BLE advertising, which both bluetooth services rely on — inherited from reachy-mini-os)
+
+Everything else is stock pi-gen; the kernel tracks whatever the Raspberry Pi archive ships. Two deliberate exceptions: `depends` requires `qemu-user-static` (what the CI apt step installs) instead of upstream's `qemu-user-binfmt`, and `.gitignore` un-ignores `config` and the `SKIP` files so this repo can commit them.
 
 The branch arm64 is used for sync with the main pi-gen repo.
 

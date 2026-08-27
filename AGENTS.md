@@ -88,16 +88,26 @@ stage. Set `OS_NAME` **before** sourcing `common-setup.sh`.
   and dbus `system_bus_socket` failures. Both are chroot artifacts, not failures.
 - The clone uses `GIT_LFS_SKIP_SMUDGE=1` — device services don't need the meshes.
 
-## Inherited from reachy-mini-os
+## Relationship to upstream pi-gen
 
-Forked from [reachy-mini-os](https://github.com/pollen-robotics/reachy-mini-os)
-(itself `RPi-Distro/pi-gen@arm64`). Untouched inherited pieces: `stage3-5/SKIP`,
-`depends`, `scripts/dependencies_check`, and the **kernel pin to 6.18.33**
-(`stage0/00-configure-apt/files/preferences.pin-kernel` + `stage0/02-firmware/01-packages`)
-— 6.18.34 broke BLE advertising, which both bluetooth services rely on. To drop
-the pin later, delete both. Note it fails hard once that version leaves the archive.
-`stage1/00-boot-files/*` and `stage2/01-sys-tweaks/00-packages-nr` are **stock
-upstream** here; boot files are per-variant, installed by the device stages.
+Fork of [`RPi-Distro/pi-gen`](https://github.com/RPi-Distro/pi-gen), `arm64`
+branch (synced to `ca8aeed`, 2026-06-16). Everything outside `common/`,
+`stage-grabette/`, `stage-gripette/` and the `config*` files is stock upstream —
+including `stage0`, `stage1/00-boot-files/*` and `stage2/01-sys-tweaks/*`, so
+the kernel tracks whatever the Raspberry Pi archive ships (there is **no**
+kernel pin; one existed for a BLE-advertising regression in 6.18.34 and was
+removed once that was fixed upstream).
+
+Three deliberate divergences, all load-bearing — do not "fix" them by syncing:
+
+| File | Divergence | Why |
+|---|---|---|
+| `depends`, `scripts/dependencies_check` | `qemu-user-static` instead of upstream's `qemu-user-binfmt` | matches what the CI apt step installs; reverting makes `dependencies_check` fail on the missing `qemu-arm` binary |
+| `.gitignore` | un-ignores `config`, `SKIP`, `SKIP_IMAGES` | this repo commits `config*` and the `stage3-5/SKIP` markers |
+| `stage2/EXPORT_IMAGE`, `.gitlab-ci.yml` | deleted | export moved into the device stages (one image per variant); GitLab CI unused |
+
+To re-sync: clone upstream `arm64`, `diff -rq` against this tree, and reconcile
+only files outside the list above.
 
 ## Open items
 

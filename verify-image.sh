@@ -40,7 +40,7 @@ ck "monorepo checkout present"           test -f $R/home/pollen/grabette/pyproje
 ck "venv python present"                 test -L $R/home/pollen/grabette/.venv/bin/python
 ck "venv uses system site-packages"      grep -q 'include-system-site-packages = true' $R/home/pollen/grabette/.venv/pyvenv.cfg
 ck "bluetooth BLE-only"                  grep -q '^ControllerMode = le' $R/etc/bluetooth/main.conf
-ck "kernel pinned 6.18.33"               ls -d $R/lib/modules/6.18.33*
+ck "kernel modules installed"            bash -c "ls -d $R/lib/modules/*+rpt-rpi-* >/dev/null"
 ck "VERSION.txt"                         grep -q 'OS:' $R/home/pollen/VERSION.txt
 ck "pollen user exists"                  grep -q '^pollen:' $R/etc/passwd
 ck "pollen in dialout+netdev+video"      bash -c "grep -E '^(dialout|netdev|video):' $R/etc/group | grep -vc pollen | grep -qx 0"
