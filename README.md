@@ -13,7 +13,8 @@ Both images share: user `pollen`, the grabette monorepo clone at `/home/pollen/g
 
 Flash the matching image with Raspberry Pi Imager ("Use custom") and in the OS customisation settings:
 
-- **Hostname: `<device>-left` or `<device>-right` (e.g. `grabette-left`, `gripette-right`) — this is how the device learns which hand it is.** On first start, the main service derives `GRABETTE_HAND`/`GRIPPER_HAND` from the hostname and writes it to `/etc/<device>/env`. Any other hostname makes the service fail with an explicit journal message until you fix the hostname (`sudo hostnamectl set-hostname grabette-left`) or set the variable manually.
+- **Hostname: leave it unset.** On first boot `hostname-suffix` appends the low digits of the Pi serial to the baked name (`grabette-1f9a2b`), so several devices of one variant are distinguishable on a network without anyone naming them. A hostname you set yourself (any name with a hyphen) is left untouched.
+- **Hand: the hostname is how the device learns it** — the main service derives `GRABETTE_HAND`/`GRIPPER_HAND` from a hostname containing `left` or `right` and writes it to `/etc/<device>/env`. Any other hostname makes the service fail with an explicit journal message until you set it (`sudo hostnamectl set-hostname gripette-left-1f9a2b`) or set the variable manually.
 - **Username: leave it as `pollen`** (change only the password if you want). The image bakes services and the venv under `/home/pollen`; a renamed user breaks it.
 - WiFi and SSH: as usual.
 
@@ -40,7 +41,7 @@ In CI, pushing a tag `vx.x.x` builds **both** images (matrix) and publishes them
 
 In summary, the layout relative to stock pi-gen:
 - `config`: shared configuration (user `pollen`, SSH on); `config.grabette` / `config.gripette`: per-variant `IMG_NAME`, `TARGET_HOSTNAME`, `STAGE_LIST`
-- `common/`: shared between variants — monorepo clone, hardened `cmdline.txt` (no serial console, `fsck.mode=force`), journald drop-in, `hand-from-hostname`
+- `common/`: shared between variants — monorepo clone, hardened `cmdline.txt` (no serial console, `fsck.mode=force`), journald drop-in, `hand-from-hostname`, `hostname-suffix`
 - `stage-grabette/`, `stage-gripette/`: device stages (packages, boot `config.txt`, services, venv build); each carries `EXPORT_IMAGE`, so only the selected variant's image is exported
 
 Everything else is stock pi-gen; the kernel tracks whatever the Raspberry Pi archive ships. Two deliberate exceptions: `depends` requires `qemu-user-static` (what the CI apt step installs) instead of upstream's `qemu-user-binfmt`, and `.gitignore` un-ignores `config` and the `SKIP` files so this repo can commit them.

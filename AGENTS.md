@@ -25,6 +25,10 @@ stamp in `/home/pollen/VERSION.txt` (default `dev`; CI passes the git tag).
 Output in `deploy/`. Budget hours: the pi-gen stages take ~25 min, `export-image`
 is the long pole.
 
+`sh tests/test-hostname-suffix.sh` covers `common/files/hostname-suffix` on the
+host in a second (temp ROOT, fake serial, fake `hostname` on PATH) — no image
+build needed.
+
 Verify a built image without flashing (loop-mounts it, plus qemu-chroot runtime
 checks — service module imports, script parsing, `systemd-analyze verify`,
 `hand-from-hostname` behavior):
@@ -49,7 +53,8 @@ exports an image** (upstream's `stage2/EXPORT_IMAGE` was deleted).
 
 ```
 common/common-setup.sh          sourced by both stages: monorepo clone, hardened
-                                cmdline, journald, BLE-only, hand script, VERSION.txt
+                                cmdline, journald, BLE-only, hand script,
+                                hostname-suffix, VERSION.txt
 stage-<variant>/00-<variant>/   00-packages, 00-run.sh (host side), 01-run-chroot.sh
                                 (uv venv + import check + enable), files/
 ```
@@ -83,6 +88,12 @@ stage. Set `OS_NAME` **before** sourcing `common-setup.sh`.
   install-poweroff, install-audio (minus `/etc/asound.conf`, written only once
   the card exists), install-systemd. gripette: install-rpi, enable-uart,
   harden-rpi, install-systemd, install-web (installed, not enabled).
+- **Hostnames carry a per-device suffix.** `hostname-suffix` appends the low
+  digits of the Pi serial to the baked name on first boot (`grabette-1f9a2b`) so
+  units of one variant don't collide on a network — including hand-less variants
+  like casquette. It acts only while the hostname has no hyphen, so it can never
+  append twice or overwrite a name someone chose. `hand-from-hostname` globs
+  `*left*`/`*right*`, which hex can never spell, so the suffix is invisible to it.
 - A stage script **without the exec bit is silently skipped** by pi-gen. `chmod +x`
   every new `*-run.sh`. `on_chroot` heredocs need `<<-` with real tab indentation.
 

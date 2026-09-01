@@ -33,6 +33,15 @@ echo "Installing hand-from-hostname script..."
 install -m 0755 "${COMMON_DIR}/files/hand-from-hostname" \
     "${ROOTFS_DIR}/usr/local/bin/hand-from-hostname"
 
+echo "Installing hostname-suffix (per-device hostname uniqueness)..."
+install -m 0755 "${COMMON_DIR}/files/hostname-suffix" \
+    "${ROOTFS_DIR}/usr/local/bin/hostname-suffix"
+install -m 0644 "${COMMON_DIR}/files/hostname-suffix.service" \
+    "${ROOTFS_DIR}/etc/systemd/system/hostname-suffix.service"
+on_chroot <<- EOF
+	systemctl enable hostname-suffix
+EOF
+
 echo "Forcing BLE-only Bluetooth (ensure-ble-only equivalent)..."
 BT_CONF="${ROOTFS_DIR}/etc/bluetooth/main.conf"
 grep -q '^\[General\]' "$BT_CONF" || printf '\n[General]\n' >> "$BT_CONF"
