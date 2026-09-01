@@ -66,6 +66,14 @@ stage. Set `OS_NAME` **before** sourcing `common-setup.sh`.
   It is **append-only** to `/etc/<device>/env` and guarded by a `grep`, because
   calibration (`calibrate_zero_local.py`, `calibrate_angles.py`) appends to the
   same file later. Never rewrite that file from a build or boot script.
+  The hostname is no longer set at flash time — Imager 2.0 dropped OS
+  customisation for custom images — but by the monorepo's BLE service, whose
+  `HAND left|right` command sets the hostname, clears the cached `*_HAND` line
+  (that `grep` guard would otherwise short-circuit the re-derivation) and
+  restarts the unit. Fail-closed is deliberate: an unset hand keeps the service
+  down rather than defaulting to `right`, because a left device running
+  right-hand signs records silently mirrored data, and the BLE service is
+  independent of the hand hook so the tool is always reachable to fix it.
 - **`files/*.service` are copies** of `packages/*/systemd/*.service` with `User=`,
   paths and the `ExecStartPre` hook changed. When the monorepo units change, port
   it here by hand. Same for the Makefile-derived bits (udev rule, polkit rules,

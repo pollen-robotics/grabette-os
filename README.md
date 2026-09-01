@@ -11,11 +11,18 @@ Both images share: user `pollen`, the grabette monorepo clone at `/home/pollen/g
 
 ## Flashing a device
 
-Flash the matching image with Raspberry Pi Imager ("Use custom") and in the OS customisation settings:
+Flash the matching image with Raspberry Pi Imager ("Use custom"). **Imager 2.0 no longer offers the OS customisation step for custom images** — customising a local file was only ever possible by way of a defect, and 2.0 fixed it (see [rpi-imager#1302](https://github.com/raspberrypi/rpi-imager/issues/1302)). So nothing is configured at flash time; the image boots with the user and hostname baked in, and both settings that used to live in that dialog are applied afterwards over Bluetooth.
 
-- **Hostname: `<device>-left` or `<device>-right` (e.g. `grabette-left`, `gripette-right`) — this is how the device learns which hand it is.** On first start, the main service derives `GRABETTE_HAND`/`GRIPPER_HAND` from the hostname and writes it to `/etc/<device>/env`. Any other hostname makes the service fail with an explicit journal message until you fix the hostname (`sudo hostnamectl set-hostname grabette-left`) or set the variable manually.
-- **Username: leave it as `pollen`** (change only the password if you want). The image bakes services and the venv under `/home/pollen`; a renamed user breaks it.
-- WiFi and SSH: as usual.
+Baked in, nothing to choose: user `pollen` / password `root`, SSH enabled, hostname `grabette` or `gripette`. The username is fixed on purpose (`DISABLE_FIRST_BOOT_USER_RENAME=1`) — services and the venv live under `/home/pollen` and a renamed user breaks them.
+
+Then, once the device is powered up, open the [BT Tool](https://pollen-robotics.github.io/grabette/) in Chrome or Edge (Windows, macOS and Linux alike — no Safari, no Firefox), connect to the device and:
+
+- **Set the hand — `left` or `right`.** This is how the device learns which side it is, and **the main service does not start until it is set**: on every start `ExecStartPre` runs `hand-from-hostname`, which derives the hand from the hostname and appends `GRABETTE_HAND`/`GRIPPER_HAND` to `/etc/<device>/env`. Any other hostname fails the unit with an explicit journal message, and `Restart=on-failure` retries every 5s — so the service comes up on its own within seconds of the hand being set. The tool shows the current hand (or "not set yet") as soon as it connects.
+- **Send the WiFi credentials.** Same tool, same PIN.
+
+Both are also settable over SSH if you already have a link: `sudo hostnamectl set-hostname grabette-left`, then remove the `GRABETTE_HAND=` line from `/etc/grabette/env` if one is already cached (the derivation is append-only and skips a variable that is already set) and `sudo systemctl restart grabette`.
+
+> **Do not run `make install-rpi` on a flashed image.** Everything it does is already baked in — apt deps, the venv, the udev rule, NTP, the polkit rules, the poweroff sudoers, the units. Running it would rewrite `/etc/<device>/env` from a template (dropping anything not on its allowlist) and grant its netdev/sudoers rules to `rasp`, the user the monorepo's manual bring-up assumes, not `pollen`.
 
 Per-device calibration stays a post-assembly step, appended to `/etc/<device>/env` or `~/.grabette/` (the hand script never rewrites those):
 - grabette: `packages/grabette/scripts/calibrate_angles.py` (angle sensors → `~/.grabette/angle_calibration.json`)
