@@ -1,0 +1,51 @@
+#!/bin/sh -e
+# Give this device a hostname that is unique on the network, by appending the low
+# digits of the Raspberry Pi serial to the name baked into the image:
+#
+#     grabette  ->  grabette-1f9a2b
+#
+# The hand, where there is one, is inserted later by the BLE service's HAND
+# command (grabette-left-1f9a2b). hand-from-hostname globs *left*/*right* and hex
+# can never spell either, so this suffix is invisible to it.
+#
+# Runs on every boot but acts at most once: it only touches a hostname that is
+# still the bare baked name, i.e. one with no hyphen. Every name chosen after
+# that has one — a hand, a hand-set label, or a previous run of this script — so
+# this can neither append twice nor overwrite a name someone picked on purpose.
+#
+# ROOT relocates the files this touches; only the tests set it
+# (tests/test-hostname-suffix.sh).
+ROOT="${ROOT:-}"
+SERIAL_FILE="${ROOT}/sys/firmware/devicetree/base/serial-number"
+HOSTNAME_FILE="${ROOT}/etc/hostname"
+HOSTS_FILE="${ROOT}/etc/hosts"
+SUFFIX_LEN=6
+
+current="$(hostname)"
+case "$current" in
+    *-*) exit 0 ;;   # already named: a hand, a label, or an earlier run
+esac
+
+# The devicetree node is NUL-terminated; keep only hex so no stray byte can
+# reach the hostname.
+serial="$(tr -d '\000' < "$SERIAL_FILE" 2>/dev/null | tr -dc '0-9a-f')" || serial=""
+if [ -z "$serial" ]; then
+    echo "hostname-suffix: no readable Pi serial, leaving '$current'" >&2
+    exit 0
+fi
+# The high digits of a Pi serial are shared across boards; the low ones identify
+# this one.
+new="${current}-$(printf '%s' "$serial" | tail -c "$SUFFIX_LEN")"
+
+# /etc/hosts first. A 127.0.1.1 line still naming the old host is what makes
+# sudo print "unable to resolve host" on every call, and neither hostnamectl nor
+# a bare /etc/hostname write fixes it. Only that line names the machine —
+# 127.0.0.1 is localhost and must not be touched.
+if grep -q '^127\.0\.1\.1' "$HOSTS_FILE" 2>/dev/null; then
+    sed -i "s/^\(127\.0\.1\.1[[:space:]]\{1,\}\).*/\1${new}/" "$HOSTS_FILE"
+else
+    printf '127.0.1.1\t%s\n' "$new" >> "$HOSTS_FILE"
+fi
+printf '%s\n' "$new" > "$HOSTNAME_FILE"
+hostname "$new"
+echo "hostname-suffix: ${current} -> ${new}"

@@ -25,6 +25,10 @@ stamp in `/home/pollen/VERSION.txt` (default `dev`; CI passes the git tag).
 Output in `deploy/`. Budget hours: the pi-gen stages take ~25 min, `export-image`
 is the long pole.
 
+`sh tests/test-hostname-suffix.sh` covers `common/files/hostname-suffix` on the
+host in a second (temp ROOT, fake serial, fake `hostname` on PATH) — no image
+build needed.
+
 Verify a built image without flashing (loop-mounts it, plus qemu-chroot runtime
 checks — service module imports, script parsing, `systemd-analyze verify`,
 `hand-from-hostname` behavior):
@@ -48,7 +52,8 @@ exports an image** (upstream's `stage2/EXPORT_IMAGE` was deleted).
 
 ```
 common/common-setup.sh          sourced by both stages: monorepo clone, hardened
-                                cmdline, journald, BLE-only, hand script, VERSION.txt
+                                cmdline, journald, BLE-only, hand script,
+                                hostname-suffix, VERSION.txt
 stage-<variant>/00-<variant>/   00-packages, 00-run.sh (host side), 01-run-chroot.sh
                                 (uv venv + import check + enable), files/
 ```
@@ -79,6 +84,14 @@ stage. Set `OS_NAME` **before** sourcing `common-setup.sh`.
   it here by hand. Same for the Makefile-derived bits (udev rule, polkit rules,
   sudoers, timesyncd) — `config.txt` and `timesyncd-grabette.conf` are currently
   byte-identical copies of the monorepo files; keep them that way.
+- **Hostnames carry a per-device suffix.** `hostname-suffix` appends the low
+  digits of the Pi serial to the baked name on first boot (`grabette-1f9a2b`) so
+  units of one variant don't collide on a network — including hand-less variants
+  like casquette, which have no BLE step that would otherwise name them. It acts
+  only while the hostname has no hyphen, so it can never append twice or
+  overwrite a name a human or the BLE `HAND` command chose. The monorepo's
+  `_hand_hostname` preserves that suffix by keeping whatever trails the device
+  name; the serial rule itself lives only here.
 - A stage script **without the exec bit is silently skipped** by pi-gen. `chmod +x`
   every new `*-run.sh`. `on_chroot` heredocs need `<<-` with real tab indentation.
 

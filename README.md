@@ -13,11 +13,11 @@ Both images share: user `pollen`, the grabette monorepo clone at `/home/pollen/g
 
 Flash the matching image with Raspberry Pi Imager ("Use custom"). **Imager 2.0 no longer offers the OS customisation step for custom images** — customising a local file was only ever possible by way of a defect, and 2.0 fixed it (see [rpi-imager#1302](https://github.com/raspberrypi/rpi-imager/issues/1302)). So nothing is configured at flash time; the image boots with the user and hostname baked in, and both settings that used to live in that dialog are applied afterwards over Bluetooth.
 
-Baked in, nothing to choose: user `pollen` / password `root`, SSH enabled, hostname `grabette` or `gripette`. The username is fixed on purpose (`DISABLE_FIRST_BOOT_USER_RENAME=1`) — services and the venv live under `/home/pollen` and a renamed user breaks them.
+Baked in, nothing to choose: user `pollen` / password `root`, SSH enabled. The hostname is `grabette`/`gripette` plus the low digits of the Pi serial, appended on first boot by `hostname-suffix` (`grabette-1f9a2b`), so several devices of one variant are distinguishable on a network without anyone naming them. The username is fixed on purpose (`DISABLE_FIRST_BOOT_USER_RENAME=1`) — services and the venv live under `/home/pollen` and a renamed user breaks them.
 
 Then, once the device is powered up, open the [BT Tool](https://pollen-robotics.github.io/grabette/) in Chrome or Edge (Windows, macOS and Linux alike — no Safari, no Firefox), connect to the device and:
 
-- **Set the hand — `left` or `right`.** This is how the device learns which side it is, and **the main service does not start until it is set**: on every start `ExecStartPre` runs `hand-from-hostname`, which derives the hand from the hostname and appends `GRABETTE_HAND`/`GRIPPER_HAND` to `/etc/<device>/env`. Any other hostname fails the unit with an explicit journal message, and `Restart=on-failure` retries every 5s — so the service comes up on its own within seconds of the hand being set. The tool shows the current hand (or "not set yet") as soon as it connects.
+- **Set the hand — `left` or `right`.** This is how the device learns which side it is, and **the main service does not start until it is set**: on every start `ExecStartPre` runs `hand-from-hostname`, which derives the hand from the hostname and appends `GRABETTE_HAND`/`GRIPPER_HAND` to `/etc/<device>/env`. Any other hostname fails the unit with an explicit journal message, and `Restart=on-failure` retries every 5s — so the service comes up on its own within seconds of the hand being set. The tool shows the current hand (or "not set yet") as soon as it connects. Setting it keeps the serial suffix — `grabette-left-1f9a2b`.
 - **Send the WiFi credentials.** Same tool, same PIN.
 
 Both are also settable over SSH if you already have a link: `sudo hostnamectl set-hostname grabette-left`, then remove the `GRABETTE_HAND=` line from `/etc/grabette/env` if one is already cached (the derivation is append-only and skips a variable that is already set) and `sudo systemctl restart grabette`.
@@ -47,7 +47,7 @@ In CI, pushing a tag `vx.x.x` builds **both** images (matrix) and publishes them
 
 In summary, the layout relative to stock pi-gen:
 - `config`: shared configuration (user `pollen`, SSH on); `config.grabette` / `config.gripette`: per-variant `IMG_NAME`, `TARGET_HOSTNAME`, `STAGE_LIST`
-- `common/`: shared between variants — monorepo clone, hardened `cmdline.txt` (no serial console, `fsck.mode=force`), journald drop-in, `hand-from-hostname`
+- `common/`: shared between variants — monorepo clone, hardened `cmdline.txt` (no serial console, `fsck.mode=force`), journald drop-in, `hand-from-hostname`, `hostname-suffix`
 - `stage-grabette/`, `stage-gripette/`: device stages (packages, boot `config.txt`, services, venv build); each carries `EXPORT_IMAGE`, so only the selected variant's image is exported
 
 Everything else is stock pi-gen; the kernel tracks whatever the Raspberry Pi archive ships. Two deliberate exceptions: `depends` requires `qemu-user-static` (what the CI apt step installs) instead of upstream's `qemu-user-binfmt`, and `.gitignore` un-ignores `config` and the `SKIP` files so this repo can commit them.

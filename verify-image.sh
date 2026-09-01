@@ -36,6 +36,8 @@ ck "cmdline: real PARTUUID substituted"  grep -q 'root=PARTUUID=' $B/cmdline.txt
 ck "journald persistent drop-in"         grep -q 'Storage=persistent' $R/etc/systemd/journald.conf.d/10-journald-persistent.conf
 ck "/var/log/journal exists"             test -d $R/var/log/journal
 ck "hand-from-hostname installed +x"     test -x $R/usr/local/bin/hand-from-hostname
+ck "hostname-suffix installed +x"        test -x $R/usr/local/bin/hostname-suffix
+ck "hostname-suffix enabled"             test -L $R/etc/systemd/system/multi-user.target.wants/hostname-suffix.service
 ck "monorepo checkout present"           test -f $R/home/pollen/grabette/pyproject.toml
 ck "venv python present"                 test -L $R/home/pollen/grabette/.venv/bin/python
 ck "venv uses system site-packages"      grep -q 'include-system-site-packages = true' $R/home/pollen/grabette/.venv/pyvenv.cfg
