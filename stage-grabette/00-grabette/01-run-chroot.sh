@@ -10,6 +10,10 @@ echo 'export PATH=$PATH:/opt/uv' >> /home/pollen/.bashrc
 echo "Building the grabette venv (make install-rpi equivalent)..."
 chown -R pollen:pollen /home/pollen/grabette
 cd /home/pollen/grabette
+# The clone skips LFS, but the dashboard's 3D viewer serves the URDF meshes
+# (/urdf/grabette_<hand>/assets/*.stl): fetch those, both hands (~70 MB).
+runuser -u pollen -- env HOME=/home/pollen \
+    git lfs pull --include="packages/grabette/urdf/**"
 # --system-site-packages so apt's libcamera/picamera2 satisfy the dependency
 # tree — mirrors packages/grabette/Makefile install-rpi.
 runuser -u pollen -- env HOME=/home/pollen /opt/uv/uv venv \

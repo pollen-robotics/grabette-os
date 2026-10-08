@@ -83,6 +83,7 @@ else
     ck "check script"                    test -x $R/usr/local/bin/grabetteos_check
     ck "grabette pkg in venv"            ls -d $R/home/pollen/grabette/.venv/lib/python*/site-packages/grabette*
     ck "depthai in venv"                 ls -d $R/home/pollen/grabette/.venv/lib/python*/site-packages/depthai*
+    ckno "URDF meshes not LFS pointers"  grep -rlq 'git-lfs.github.com/spec' $R/home/pollen/grabette/packages/grabette/urdf
 fi
 
 # Writable /tmp for the chroot checks (systemd-analyze needs a working dir);

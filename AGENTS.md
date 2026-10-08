@@ -107,7 +107,10 @@ stage. Set `OS_NAME` **before** sourcing `common-setup.sh`.
   read-only mount).
 - Benign build-log noise: `update-alternatives: error: no alternatives for mkvinfo`
   and dbus `system_bus_socket` failures. Both are chroot artifacts, not failures.
-- The clone uses `GIT_LFS_SKIP_SMUDGE=1` — device services don't need the meshes.
+- The clone uses `GIT_LFS_SKIP_SMUDGE=1`, then grabette's stage `git lfs pull`s
+  only `packages/grabette/urdf/**` (~70 MB): the dashboard's 3D viewer serves
+  those meshes, and a pointer file renders nothing while still returning 200.
+  The rest (CAD, PDFs, gripette URDF — unused by gripette's code) stays out.
 
 ## Relationship to upstream pi-gen
 
