@@ -63,12 +63,19 @@ else
     ck "config.txt: i2c3 overlay"        grep -q 'dtoverlay=i2c3,pins_4_5' $B/config.txt
     ck "config.txt: i2c4 overlay"        grep -q 'dtoverlay=i2c4,pins_8_9' $B/config.txt
     ck "config.txt: i2c_arm on"          grep -q '^dtparam=i2c_arm=on' $B/config.txt
+    ck "i2c-dev loaded at boot"          grep -qx 'i2c-dev' $R/etc/modules-load.d/i2c-dev.conf
     ck "env defaults, no HAND yet"       bash -c "test -f $R/etc/grabette/env && ! grep -q ^GRABETTE_HAND= $R/etc/grabette/env"
     ck "grabette.service baked"          grep -q 'User=pollen' $R/etc/systemd/system/grabette.service
     ck "grabette.service hand ExecStartPre" grep -q 'ExecStartPre=+/usr/local/bin/hand-from-hostname /etc/grabette/env GRABETTE_HAND' $R/etc/systemd/system/grabette.service
     ck "grabette enabled"                test -L $R/etc/systemd/system/multi-user.target.wants/grabette.service
     ck "grabette-bluetooth enabled"      test -L $R/etc/systemd/system/multi-user.target.wants/grabette-bluetooth.service
     ck "OAK-D udev rule"                 grep -q 'idVendor}=="03e7"' $R/etc/udev/rules.d/80-movidius.rules
+    ck "Gemini 305 udev rule"            grep -q 'idVendor}=="2bc5"' $R/etc/udev/rules.d/99-obsensor-libusb.rules
+    ck "config.txt: i2s on"              grep -q '^dtparam=i2s=on' $B/config.txt
+    ck "config.txt: speaker overlay"     grep -q '^dtoverlay=tlv320aic3104' $B/config.txt
+    ck "speaker overlay compiled"        test -s $B/overlays/tlv320aic3104.dtbo
+    ck "aic3104-init enabled"            test -L $R/etc/systemd/system/multi-user.target.wants/aic3104-init.service
+    ck "aic3104-init.sh installed +x"    test -x $R/usr/local/bin/aic3104-init.sh
     ck "NTP pinned to cloudflare"        grep -q 'NTP=time.cloudflare.com' $R/etc/systemd/timesyncd.conf.d/grabette.conf
     ck "polkit wifi scan rule"           grep -q 'wifi.scan' $R/etc/polkit-1/rules.d/10-grabette-wifi-scan.rules
     ck "polkit wifi connect rule"        grep -q 'network-control' $R/etc/polkit-1/rules.d/10-grabette-wifi-connect.rules
@@ -76,6 +83,7 @@ else
     ck "check script"                    test -x $R/usr/local/bin/grabetteos_check
     ck "grabette pkg in venv"            ls -d $R/home/pollen/grabette/.venv/lib/python*/site-packages/grabette*
     ck "depthai in venv"                 ls -d $R/home/pollen/grabette/.venv/lib/python*/site-packages/depthai*
+    ckno "URDF meshes not LFS pointers"  grep -rlq 'git-lfs.github.com/spec' $R/home/pollen/grabette/packages/grabette/urdf
 fi
 
 # Writable /tmp for the chroot checks (systemd-analyze needs a working dir);
@@ -84,13 +92,17 @@ mount -t tmpfs tmpfs "$R/tmp" || echo "warn: no tmpfs on /tmp"
 
 echo "=== runtime checks (qemu chroot, read-only) ==="
 PY=/home/pollen/grabette/.venv/bin/python
-if [ "$VARIANT" = gripette ]; then MODS="gripette, gripette.bluetooth, gripette.webui, dbus, gi"; else MODS="grabette, grabette.bluetooth, dbus, gi"; fi
+if [ "$VARIANT" = gripette ]; then MODS="gripette, gripette.bluetooth, gripette.webui, dbus, gi"; else MODS="grabette, grabette.bluetooth, pyorbbecsdk, dbus, gi"; fi
 ck "service entry modules import" \
     chroot $R env PYTHONDONTWRITEBYTECODE=1 $PY -c "import ${MODS}"
 ck "on-device scripts parse on image python" \
     chroot $R env PYTHONDONTWRITEBYTECODE=1 $PY -c "import ast,glob; [ast.parse(open(f).read(),f) for f in glob.glob('/home/pollen/grabette/packages/${VARIANT}/scripts/*.py')]"
 ck "systemd-analyze verify units" \
     chroot $R systemd-analyze verify /etc/systemd/system/${VARIANT}.service /etc/systemd/system/${VARIANT}-bluetooth.service
+if [ "$VARIANT" = grabette ]; then
+    ck "aic3104-init unit + script" \
+        chroot $R sh -c "systemd-analyze verify /etc/systemd/system/aic3104-init.service && bash -n /usr/local/bin/aic3104-init.sh"
+fi
 
 echo "=== hand-from-hostname behavior (via qemu chroot) ==="
 # binfmt_misc with the F flag lets us chroot into the aarch64 rootfs.
