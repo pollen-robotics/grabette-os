@@ -4,7 +4,7 @@ This repository builds the custom Raspberry Pi OS images (arm64) for the two dev
 
 | Image | Device | Bakes in |
 |---|---|---|
-| `grabetteos` | grabette (Pi 4) | apt deps (picamera2, ffmpeg, dbus/gi), uv workspace venv (`--extra rpi --extra ui --extra hf`), i2c3/i2c4 angle-sensor overlays, OAK-D udev rule, NTP pinned to a coordinated anycast service (multi-device recording sync), polkit WiFi scan/connect rules, poweroff sudoers, `grabette` + `grabette-bluetooth` services |
+| `grabetteos` | grabette (Pi 4) | apt deps (picamera2, ffmpeg, dbus/gi), uv workspace venv (`--extra rpi --extra ui --extra hf`), i2c3/i2c4 angle-sensor overlays, Gemini 305 SDK (`pyorbbecsdk2`) + udev rules for both depth cameras, HAT speaker overlay + `aic3104-init` mixer service, NTP pinned to a coordinated anycast service (multi-device recording sync), polkit WiFi scan/connect rules, poweroff sudoers, `grabette` + `grabette-bluetooth` services |
 | `gripetteos` | gripette (Pi Zero 2W) | apt deps (picamera2, dbus/gi), uv workspace venv (`--extra rpi`), UART on the PL011 (`dtoverlay=miniuart-bt`, no serial console) for the 1 Mbaud motor bus, web-UI sudoers, `gripette` + `gripette-bluetooth` services (`gripette-web` installed but opt-in) |
 
 Both images share: user `pollen`, the grabette monorepo clone at `/home/pollen/grabette`, crash hardening (persistent capped journal, `fsck.mode=force`), BLE-only Bluetooth, and HAND-from-hostname first-boot setup.

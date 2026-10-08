@@ -34,7 +34,8 @@ docker run --rm --privileged -v $PWD:/v pi-gen \
   bash /v/verify-image.sh image_<date>-<variant>os.zip <variant>
 ```
 
-Both variants passed all checks as of 2026-08-26. **Nothing hardware-dependent is
+Both variants passed all checks as of 2026-08-26; grabette again (with the speaker
+and Gemini 305 checks) on 2026-10-08. **Nothing hardware-dependent is
 covered** — camera, motor bus, OAK-D, I2C encoders, BLE provisioning need a real
 device (`gripetteos_check` / `grabetteos_check` on the device, then the monorepo's
 `make check` / `scripts/check_hardware.py`).
@@ -69,8 +70,19 @@ stage. Set `OS_NAME` **before** sourcing `common-setup.sh`.
 - **`files/*.service` are copies** of `packages/*/systemd/*.service` with `User=`,
   paths and the `ExecStartPre` hook changed. When the monorepo units change, port
   it here by hand. Same for the Makefile-derived bits (udev rule, polkit rules,
-  sudoers, timesyncd) — `config.txt` and `timesyncd-grabette.conf` are currently
-  byte-identical copies of the monorepo files; keep them that way.
+  sudoers, timesyncd, the Orbbec udev rule the Makefile writes inline) —
+  `config.txt` and `timesyncd-grabette.conf` are byte-identical copies of the
+  monorepo files; keep them that way (`config.txt` once drifted and silently
+  left the HAT speaker disabled). Files that need no adaptation are **not**
+  copied but installed from the baked checkout in `01-run-chroot.sh` (speaker
+  overlay, `aic3104-init.sh`/`.service`), so they cannot drift.
+- **Every `make install-*` target must have an equivalent in the stage.**
+  Nothing here runs `make`; a target added in the monorepo is silently missing
+  from the image until ported. grabette covers install-rpi (incl.
+  install-orbbec-sdk), install-udev (both cameras), install-ntp, install-netdev,
+  install-poweroff, install-audio (minus `/etc/asound.conf`, written only once
+  the card exists), install-systemd. gripette: install-rpi, enable-uart,
+  harden-rpi, install-systemd, install-web (installed, not enabled).
 - A stage script **without the exec bit is silently skipped** by pi-gen. `chmod +x`
   every new `*-run.sh`. `on_chroot` heredocs need `<<-` with real tab indentation.
 
@@ -80,6 +92,10 @@ stage. Set `OS_NAME` **before** sourcing `common-setup.sh`.
   `BASE_DIR` exists, and `set -u` kills the build otherwise.
 - New env vars consumed by a stage must be added to `build-docker.sh`'s `docker run
   -e` list, or Docker builds silently see them empty.
+- `build-docker.sh` on an x86 host looks up `qemu-aarch64` by that exact name;
+  Ubuntu's `qemu-user-static` only ships `qemu-aarch64-static` (its binfmt
+  handler, flags `F`, is what actually matters). A symlink named `qemu-aarch64`
+  early on `PATH` satisfies the check.
 - In the container: no `unzip` (use `bsdtar`), and `/dev` is a tmpfs so loop
   partition nodes must be `mknod`'d from `/sys/class/block` — `verify-image.sh`
   does both. `systemd-analyze verify` needs a writable `/tmp` (tmpfs over the

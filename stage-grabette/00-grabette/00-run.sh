@@ -17,6 +17,12 @@ install -m 0644 files/grabette.service files/grabette-bluetooth.service \
 echo "Installing OAK-D udev rule..."
 install -m 0644 files/80-movidius.rules "${ROOTFS_DIR}/etc/udev/rules.d/80-movidius.rules"
 
+# Both camera rules are baked so GRABETTE_DEPTH_CAMERA can switch without a
+# reinstall. The Makefile writes this one inline (install-udev-orbbec): keep the
+# copy in files/ in sync with it.
+echo "Installing Gemini 305 udev rule..."
+install -m 0644 files/99-obsensor-libusb.rules "${ROOTFS_DIR}/etc/udev/rules.d/99-obsensor-libusb.rules"
+
 echo "Installing NTP config for multi-device recording sync (install-ntp equivalent)..."
 install -d -m 0755 "${ROOTFS_DIR}/etc/systemd/timesyncd.conf.d"
 install -m 0644 files/timesyncd-grabette.conf \

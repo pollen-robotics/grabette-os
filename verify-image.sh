@@ -69,6 +69,12 @@ else
     ck "grabette enabled"                test -L $R/etc/systemd/system/multi-user.target.wants/grabette.service
     ck "grabette-bluetooth enabled"      test -L $R/etc/systemd/system/multi-user.target.wants/grabette-bluetooth.service
     ck "OAK-D udev rule"                 grep -q 'idVendor}=="03e7"' $R/etc/udev/rules.d/80-movidius.rules
+    ck "Gemini 305 udev rule"            grep -q 'idVendor}=="2bc5"' $R/etc/udev/rules.d/99-obsensor-libusb.rules
+    ck "config.txt: i2s on"              grep -q '^dtparam=i2s=on' $B/config.txt
+    ck "config.txt: speaker overlay"     grep -q '^dtoverlay=tlv320aic3104' $B/config.txt
+    ck "speaker overlay compiled"        test -s $B/overlays/tlv320aic3104.dtbo
+    ck "aic3104-init enabled"            test -L $R/etc/systemd/system/multi-user.target.wants/aic3104-init.service
+    ck "aic3104-init.sh installed +x"    test -x $R/usr/local/bin/aic3104-init.sh
     ck "NTP pinned to cloudflare"        grep -q 'NTP=time.cloudflare.com' $R/etc/systemd/timesyncd.conf.d/grabette.conf
     ck "polkit wifi scan rule"           grep -q 'wifi.scan' $R/etc/polkit-1/rules.d/10-grabette-wifi-scan.rules
     ck "polkit wifi connect rule"        grep -q 'network-control' $R/etc/polkit-1/rules.d/10-grabette-wifi-connect.rules
@@ -84,13 +90,17 @@ mount -t tmpfs tmpfs "$R/tmp" || echo "warn: no tmpfs on /tmp"
 
 echo "=== runtime checks (qemu chroot, read-only) ==="
 PY=/home/pollen/grabette/.venv/bin/python
-if [ "$VARIANT" = gripette ]; then MODS="gripette, gripette.bluetooth, gripette.webui, dbus, gi"; else MODS="grabette, grabette.bluetooth, dbus, gi"; fi
+if [ "$VARIANT" = gripette ]; then MODS="gripette, gripette.bluetooth, gripette.webui, dbus, gi"; else MODS="grabette, grabette.bluetooth, pyorbbecsdk, dbus, gi"; fi
 ck "service entry modules import" \
     chroot $R env PYTHONDONTWRITEBYTECODE=1 $PY -c "import ${MODS}"
 ck "on-device scripts parse on image python" \
     chroot $R env PYTHONDONTWRITEBYTECODE=1 $PY -c "import ast,glob; [ast.parse(open(f).read(),f) for f in glob.glob('/home/pollen/grabette/packages/${VARIANT}/scripts/*.py')]"
 ck "systemd-analyze verify units" \
     chroot $R systemd-analyze verify /etc/systemd/system/${VARIANT}.service /etc/systemd/system/${VARIANT}-bluetooth.service
+if [ "$VARIANT" = grabette ]; then
+    ck "aic3104-init unit + script" \
+        chroot $R sh -c "systemd-analyze verify /etc/systemd/system/aic3104-init.service && bash -n /usr/local/bin/aic3104-init.sh"
+fi
 
 echo "=== hand-from-hostname behavior (via qemu chroot) ==="
 # binfmt_misc with the F flag lets us chroot into the aarch64 rootfs.
