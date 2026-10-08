@@ -63,6 +63,7 @@ else
     ck "config.txt: i2c3 overlay"        grep -q 'dtoverlay=i2c3,pins_4_5' $B/config.txt
     ck "config.txt: i2c4 overlay"        grep -q 'dtoverlay=i2c4,pins_8_9' $B/config.txt
     ck "config.txt: i2c_arm on"          grep -q '^dtparam=i2c_arm=on' $B/config.txt
+    ck "i2c-dev loaded at boot"          grep -qx 'i2c-dev' $R/etc/modules-load.d/i2c-dev.conf
     ck "env defaults, no HAND yet"       bash -c "test -f $R/etc/grabette/env && ! grep -q ^GRABETTE_HAND= $R/etc/grabette/env"
     ck "grabette.service baked"          grep -q 'User=pollen' $R/etc/systemd/system/grabette.service
     ck "grabette.service hand ExecStartPre" grep -q 'ExecStartPre=+/usr/local/bin/hand-from-hostname /etc/grabette/env GRABETTE_HAND' $R/etc/systemd/system/grabette.service

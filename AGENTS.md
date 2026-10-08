@@ -92,6 +92,11 @@ stage. Set `OS_NAME` **before** sourcing `common-setup.sh`.
   `BASE_DIR` exists, and `set -u` kills the build otherwise.
 - New env vars consumed by a stage must be added to `build-docker.sh`'s `docker run
   -e` list, or Docker builds silently see them empty.
+- `dtparam=i2c_arm=on` / the i2c3,i2c4 overlays only create kernel buses; the
+  `/dev/i2c-N` nodes need `i2c-dev` (`/etc/modules-load.d/i2c-dev.conf`, what
+  raspi-config adds on a manual bring-up). Every image before 2026-10-08 lacked
+  it — `verify-image.sh` never boots a kernel, so only `grabetteos_check` on a
+  device catches this class of bug.
 - `build-docker.sh` on an x86 host looks up `qemu-aarch64` by that exact name;
   Ubuntu's `qemu-user-static` only ships `qemu-aarch64-static` (its binfmt
   handler, flags `F`, is what actually matters). A symlink named `qemu-aarch64`

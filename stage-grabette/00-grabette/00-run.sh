@@ -10,6 +10,13 @@ source "$(dirname "${BASH_SOURCE[0]}")/../../common/common-setup.sh"
 echo "Installing grabette boot config (i2c3/i2c4 angle-sensor overlays)..."
 install -m 0644 files/config.txt "${ROOTFS_DIR}/boot/firmware/config.txt"
 
+# config.txt brings the I2C buses up in the kernel, but /dev/i2c-N only exist
+# once i2c-dev is loaded — what `raspi-config nonint do_i2c 0` adds on a manual
+# bring-up. Angle sensors (i2c-3/4), the dashboard (bus 1) and aic3104-init
+# (ConditionPathExists=/dev/i2c-1) all open those nodes.
+echo "Loading i2c-dev at boot..."
+install -m 0644 files/i2c-dev.conf "${ROOTFS_DIR}/etc/modules-load.d/i2c-dev.conf"
+
 echo "Installing grabette systemd units..."
 install -m 0644 files/grabette.service files/grabette-bluetooth.service \
     "${ROOTFS_DIR}/etc/systemd/system/"
