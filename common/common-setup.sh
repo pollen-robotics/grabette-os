@@ -19,8 +19,10 @@ GIT_LFS_SKIP_SMUDGE=1 git clone --branch "${GRABETTE_REF}" --depth 1 \
 
 echo "Installing persistent journald config..."
 install -d -m 0755 "${ROOTFS_DIR}/etc/systemd/journald.conf.d"
-install -m 0644 "${COMMON_DIR}/files/10-journald-persistent.conf" \
-    "${ROOTFS_DIR}/etc/systemd/journald.conf.d/10-journald-persistent.conf"
+# 90- so it sorts after raspberrypi-sys-mods' 40-rpi-volatile-storage.conf
+# (Storage=volatile): drop-ins from /etc and /usr/lib apply in filename order.
+install -m 0644 "${COMMON_DIR}/files/90-journald-persistent.conf" \
+    "${ROOTFS_DIR}/etc/systemd/journald.conf.d/90-journald-persistent.conf"
 install -d "${ROOTFS_DIR}/var/log/journal"
 
 echo "Installing hardened cmdline.txt (no serial console, fsck.mode=force)..."

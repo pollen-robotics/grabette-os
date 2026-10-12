@@ -113,6 +113,11 @@ stage. Set `OS_NAME` **before** sourcing `common-setup.sh`.
   raspi-config adds on a manual bring-up). Every image before 2026-10-08 lacked
   it — `verify-image.sh` never boots a kernel, so only `grabetteos_check` on a
   device catches this class of bug.
+- journald drop-ins in `/etc` and `/usr/lib` merge **by filename**:
+  raspberrypi-sys-mods ships `40-rpi-volatile-storage.conf` (`Storage=volatile`),
+  so ours is `90-journald-persistent.conf`. Before 2026-10-12 it was `10-…` and
+  lost — no image kept logs across reboots. `verify-image.sh` now checks the
+  effective value (`systemd-analyze cat-config`), not just our file.
 - `build-docker.sh` on an x86 host looks up `qemu-aarch64` by that exact name;
   Ubuntu's `qemu-user-static` only ships `qemu-aarch64-static` (its binfmt
   handler, flags `F`, is what actually matters). A symlink named `qemu-aarch64`

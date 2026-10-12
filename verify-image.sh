@@ -33,7 +33,7 @@ echo "=== common checks ($VARIANT) ==="
 ck "cmdline: fsck.mode=force"            grep -q 'fsck.mode=force' $B/cmdline.txt
 ckno "cmdline: no serial console"        grep -Eq 'console=(serial0|ttyAMA0|ttyS0)' $B/cmdline.txt
 ck "cmdline: real PARTUUID substituted"  grep -q 'root=PARTUUID=' $B/cmdline.txt
-ck "journald persistent drop-in"         grep -q 'Storage=persistent' $R/etc/systemd/journald.conf.d/10-journald-persistent.conf
+ck "journald persistent drop-in"         grep -q 'Storage=persistent' $R/etc/systemd/journald.conf.d/90-journald-persistent.conf
 ck "/var/log/journal exists"             test -d $R/var/log/journal
 ck "hand-from-hostname installed +x"     test -x $R/usr/local/bin/hand-from-hostname
 ck "hostname-suffix installed +x"        test -x $R/usr/local/bin/hostname-suffix
@@ -99,6 +99,10 @@ ck "service entry modules import" \
     chroot $R env PYTHONDONTWRITEBYTECODE=1 $PY -c "import ${MODS}"
 ck "on-device scripts parse on image python" \
     chroot $R env PYTHONDONTWRITEBYTECODE=1 $PY -c "import ast,glob; [ast.parse(open(f).read(),f) for f in glob.glob('/home/pollen/grabette/packages/${VARIANT}/scripts/*.py')]"
+# The effective value, not our file: a later drop-in (raspberrypi-sys-mods'
+# 40-rpi-volatile-storage.conf) once silently overrode it.
+ck "journald effective Storage=persistent" \
+    chroot $R sh -c "systemd-analyze cat-config systemd/journald.conf | grep '^Storage=' | tail -1 | grep -qx Storage=persistent"
 ck "systemd-analyze verify units" \
     chroot $R systemd-analyze verify /etc/systemd/system/${VARIANT}.service /etc/systemd/system/${VARIANT}-bluetooth.service
 if [ "$VARIANT" = grabette ]; then
