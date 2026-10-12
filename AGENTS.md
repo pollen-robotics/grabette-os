@@ -70,8 +70,10 @@ stage. Set `OS_NAME` **before** sourcing `common-setup.sh`.
 - **HAND comes from the hostname** (`<device>-left|right`), derived on first service
   start by `ExecStartPre=+/usr/local/bin/hand-from-hostname <env-file> <VAR>`.
   It is **append-only** to `/etc/<device>/env` and guarded by a `grep`, because
-  calibration (`calibrate_zero_local.py`, `calibrate_angles.py`) appends to the
-  same file later. Never rewrite that file from a build or boot script.
+  per-device lines land in the same file later (gripette's
+  `calibrate_zero_local.py` motor offsets, grabette's `GRABETTE_*_SIGN`
+  overrides). Never rewrite that file from a build or boot script. grabette's
+  angle calibration lives elsewhere, in `~pollen/.grabette/angle_calibration.json`.
   **Exception: grabetteos bakes `GRABETTE_HAND=right`** into its initial env
   (2026-10-12, decided: no left/right selection yet), so the hand script is a
   no-op there and the service starts on first boot. That gives up fail-closed:
