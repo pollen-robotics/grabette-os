@@ -72,6 +72,11 @@ stage. Set `OS_NAME` **before** sourcing `common-setup.sh`.
   It is **append-only** to `/etc/<device>/env` and guarded by a `grep`, because
   calibration (`calibrate_zero_local.py`, `calibrate_angles.py`) appends to the
   same file later. Never rewrite that file from a build or boot script.
+  **Exception: grabetteos bakes `GRABETTE_HAND=right`** into its initial env
+  (2026-10-12, decided: no left/right selection yet), so the hand script is a
+  no-op there and the service starts on first boot. That gives up fail-closed:
+  a left grabette records as right until its line is changed. gripetteos still
+  derives the hand from the hostname.
 - **`files/*.service` are copies** of `packages/*/systemd/*.service` with `User=`,
   paths and the `ExecStartPre` hook changed. When the monorepo units change, port
   it here by hand. Same for the Makefile-derived bits (udev rule, polkit rules,

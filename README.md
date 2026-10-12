@@ -14,7 +14,7 @@ Both images share: user `pollen`, the grabette monorepo clone at `/home/pollen/g
 Flash the matching image with Raspberry Pi Imager ("Use custom") and in the OS customisation settings:
 
 - **Hostname: leave it unset.** On first boot `hostname-suffix` appends the low digits of the Pi serial to the baked name (`grabette-1f9a2b`), so several devices of one variant are distinguishable on a network without anyone naming them. A hostname you set yourself (any name with a hyphen) is left untouched.
-- **Hand: the hostname is how the device learns it** — the main service derives `GRABETTE_HAND`/`GRIPPER_HAND` from a hostname containing `left` or `right` and writes it to `/etc/<device>/env`. Any other hostname makes the service fail with an explicit journal message until you set it (`sudo hostnamectl set-hostname gripette-left-1f9a2b`) or set the variable manually.
+- **Hand.** grabetteos is a **right hand by default** (`GRABETTE_HAND=right` is baked into `/etc/grabette/env`); for a left grabette change that line and `sudo systemctl restart grabette`. gripetteos derives `GRIPPER_HAND` from a hostname containing `left` or `right` and writes it to `/etc/gripette/env`; any other hostname makes the service fail with an explicit journal message until you set it (`sudo hostnamectl set-hostname gripette-left-1f9a2b`) or set the variable manually.
 - **Username: leave it as `pollen`** (change only the password if you want). The image bakes services and the venv under `/home/pollen`; a renamed user breaks it.
 - WiFi and SSH: as usual.
 

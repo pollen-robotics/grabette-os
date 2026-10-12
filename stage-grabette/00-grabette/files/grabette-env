@@ -1,6 +1,8 @@
 # Grabette persistent configuration — sourced by grabette.service via
 # EnvironmentFile=/etc/grabette/env.
-# GRABETTE_HAND=left|right is appended on first boot by
-# /usr/local/bin/hand-from-hostname (from the hostname).
+# Right hand by default: every grabette flashed from this image records as a
+# right hand until this line is changed (a left device would otherwise sign
+# mirrored data). With the line present, hand-from-hostname leaves it alone.
+GRABETTE_HAND=right
 # GRABETTE_PROXIMAL_SIGN / GRABETTE_DISTAL_SIGN overrides may be appended
 # per device.
