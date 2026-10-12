@@ -19,8 +19,10 @@ GIT_LFS_SKIP_SMUDGE=1 git clone --branch "${GRABETTE_REF}" --depth 1 \
 
 echo "Installing persistent journald config..."
 install -d -m 0755 "${ROOTFS_DIR}/etc/systemd/journald.conf.d"
-install -m 0644 "${COMMON_DIR}/files/10-journald-persistent.conf" \
-    "${ROOTFS_DIR}/etc/systemd/journald.conf.d/10-journald-persistent.conf"
+# 90- so it sorts after raspberrypi-sys-mods' 40-rpi-volatile-storage.conf
+# (Storage=volatile): drop-ins from /etc and /usr/lib apply in filename order.
+install -m 0644 "${COMMON_DIR}/files/90-journald-persistent.conf" \
+    "${ROOTFS_DIR}/etc/systemd/journald.conf.d/90-journald-persistent.conf"
 install -d "${ROOTFS_DIR}/var/log/journal"
 
 echo "Installing hardened cmdline.txt (no serial console, fsck.mode=force)..."
@@ -32,6 +34,15 @@ install -m 0644 "${COMMON_DIR}/files/cmdline.txt" \
 echo "Installing hand-from-hostname script..."
 install -m 0755 "${COMMON_DIR}/files/hand-from-hostname" \
     "${ROOTFS_DIR}/usr/local/bin/hand-from-hostname"
+
+echo "Installing hostname-suffix (per-device hostname uniqueness)..."
+install -m 0755 "${COMMON_DIR}/files/hostname-suffix" \
+    "${ROOTFS_DIR}/usr/local/bin/hostname-suffix"
+install -m 0644 "${COMMON_DIR}/files/hostname-suffix.service" \
+    "${ROOTFS_DIR}/etc/systemd/system/hostname-suffix.service"
+on_chroot <<- EOF
+	systemctl enable hostname-suffix
+EOF
 
 echo "Forcing BLE-only Bluetooth (ensure-ble-only equivalent)..."
 BT_CONF="${ROOTFS_DIR}/etc/bluetooth/main.conf"

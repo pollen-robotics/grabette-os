@@ -18,6 +18,9 @@ Environment=PYTHONUNBUFFERED=1
 # Runs as root: don't let it write root-owned .pyc caches into the
 # pollen-owned .venv.
 Environment=PYTHONDONTWRITEBYTECODE=1
+# Same per-device config as grabette.service, so CALIBRATE reaches the daemon
+# on its GRABETTE_PORT if that was ever changed there.
+EnvironmentFile=-/etc/grabette/env
 
 [Install]
 WantedBy=multi-user.target

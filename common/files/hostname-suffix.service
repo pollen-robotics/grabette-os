@@ -1,0 +1,20 @@
+# Runs /usr/local/bin/hostname-suffix, which appends the Pi serial to the
+# hostname baked into the image so several devices of one variant are
+# distinguishable on a network. The script is idempotent, so this is a no-op on
+# every boot after the first.
+[Unit]
+Description=Append the Pi serial to the image's baked hostname
+Documentation=file:///usr/local/bin/hostname-suffix
+After=local-fs.target
+# Must land before anything reads or announces the hostname: avahi's mDNS name,
+# and the device service, whose ExecStartPre derives the hand from it (it is
+# After=network.target, which network-pre precedes).
+Wants=network-pre.target
+Before=network-pre.target avahi-daemon.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/hostname-suffix
+
+[Install]
+WantedBy=multi-user.target

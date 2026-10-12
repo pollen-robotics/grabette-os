@@ -4,7 +4,7 @@ This repository builds the custom Raspberry Pi OS images (arm64) for the two dev
 
 | Image | Device | Bakes in |
 |---|---|---|
-| `grabetteos` | grabette (Pi 4) | apt deps (picamera2, ffmpeg, dbus/gi), uv workspace venv (`--extra rpi --extra ui --extra hf`), i2c3/i2c4 angle-sensor overlays, OAK-D udev rule, NTP pinned to a coordinated anycast service (multi-device recording sync), polkit WiFi scan/connect rules, poweroff sudoers, `grabette` + `grabette-bluetooth` services |
+| `grabetteos` | grabette (Pi 4) | apt deps (picamera2, ffmpeg, dbus/gi), uv workspace venv (`--extra rpi --extra ui --extra hf`), i2c3/i2c4 angle-sensor overlays, Gemini 305 SDK (`pyorbbecsdk2`) + udev rules for both depth cameras, HAT speaker overlay + `aic3104-init` mixer service, NTP pinned to a coordinated anycast service (multi-device recording sync), polkit WiFi scan/connect rules, poweroff sudoers, `grabette` + `grabette-bluetooth` services |
 | `gripetteos` | gripette (Pi Zero 2W) | apt deps (picamera2, dbus/gi), uv workspace venv (`--extra rpi`), UART on the PL011 (`dtoverlay=miniuart-bt`, no serial console) for the 1 Mbaud motor bus, web-UI sudoers, `gripette` + `gripette-bluetooth` services (`gripette-web` installed but opt-in) |
 
 Both images share: user `pollen`, the grabette monorepo clone at `/home/pollen/grabette`, crash hardening (persistent capped journal, `fsck.mode=force`), BLE-only Bluetooth, and HAND-from-hostname first-boot setup.
@@ -13,7 +13,8 @@ Both images share: user `pollen`, the grabette monorepo clone at `/home/pollen/g
 
 Flash the matching image with Raspberry Pi Imager ("Use custom") and in the OS customisation settings:
 
-- **Hostname: `<device>-left` or `<device>-right` (e.g. `grabette-left`, `gripette-right`) — this is how the device learns which hand it is.** On first start, the main service derives `GRABETTE_HAND`/`GRIPPER_HAND` from the hostname and writes it to `/etc/<device>/env`. Any other hostname makes the service fail with an explicit journal message until you fix the hostname (`sudo hostnamectl set-hostname grabette-left`) or set the variable manually.
+- **Hostname: leave it unset.** On first boot `hostname-suffix` appends the low digits of the Pi serial to the baked name (`grabette-1f9a2b`), so several devices of one variant are distinguishable on a network without anyone naming them. A hostname you set yourself (any name with a hyphen) is left untouched.
+- **Hand.** grabetteos is a **right hand by default** (`GRABETTE_HAND=right` is baked into `/etc/grabette/env`); for a left grabette change that line and `sudo systemctl restart grabette`. gripetteos derives `GRIPPER_HAND` from a hostname containing `left` or `right` and writes it to `/etc/gripette/env`; any other hostname makes the service fail with an explicit journal message until you set it (`sudo hostnamectl set-hostname gripette-left-1f9a2b`) or set the variable manually.
 - **Username: leave it as `pollen`** (change only the password if you want). The image bakes services and the venv under `/home/pollen`; a renamed user breaks it.
 - WiFi and SSH: as usual.
 
@@ -40,7 +41,7 @@ In CI, pushing a tag `vx.x.x` builds **both** images (matrix) and publishes them
 
 In summary, the layout relative to stock pi-gen:
 - `config`: shared configuration (user `pollen`, SSH on); `config.grabette` / `config.gripette`: per-variant `IMG_NAME`, `TARGET_HOSTNAME`, `STAGE_LIST`
-- `common/`: shared between variants — monorepo clone, hardened `cmdline.txt` (no serial console, `fsck.mode=force`), journald drop-in, `hand-from-hostname`
+- `common/`: shared between variants — monorepo clone, hardened `cmdline.txt` (no serial console, `fsck.mode=force`), journald drop-in, `hand-from-hostname`, `hostname-suffix`
 - `stage-grabette/`, `stage-gripette/`: device stages (packages, boot `config.txt`, services, venv build); each carries `EXPORT_IMAGE`, so only the selected variant's image is exported
 
 Everything else is stock pi-gen; the kernel tracks whatever the Raspberry Pi archive ships. Two deliberate exceptions: `depends` requires `qemu-user-static` (what the CI apt step installs) instead of upstream's `qemu-user-binfmt`, and `.gitignore` un-ignores `config` and the `SKIP` files so this repo can commit them.

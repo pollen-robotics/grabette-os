@@ -7,3 +7,5 @@ python3-gi
 ffmpeg
 git
 git-lfs
+device-tree-compiler
+alsa-utils

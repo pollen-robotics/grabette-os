@@ -25,6 +25,10 @@ stamp in `/home/pollen/VERSION.txt` (default `dev`; CI passes the git tag).
 Output in `deploy/`. Budget hours: the pi-gen stages take ~25 min, `export-image`
 is the long pole.
 
+`sh tests/test-hostname-suffix.sh` covers `common/files/hostname-suffix` on the
+host in a second (temp ROOT, fake serial, fake `hostname` on PATH) — no image
+build needed.
+
 Verify a built image without flashing (loop-mounts it, plus qemu-chroot runtime
 checks — service module imports, script parsing, `systemd-analyze verify`,
 `hand-from-hostname` behavior):
@@ -34,7 +38,8 @@ docker run --rm --privileged -v $PWD:/v pi-gen \
   bash /v/verify-image.sh image_<date>-<variant>os.zip <variant>
 ```
 
-Both variants passed all checks as of 2026-08-26. **Nothing hardware-dependent is
+Both variants passed all checks as of 2026-08-26; grabette again (with the speaker
+and Gemini 305 checks) on 2026-10-08. **Nothing hardware-dependent is
 covered** — camera, motor bus, OAK-D, I2C encoders, BLE provisioning need a real
 device (`gripetteos_check` / `grabetteos_check` on the device, then the monorepo's
 `make check` / `scripts/check_hardware.py`).
@@ -48,7 +53,8 @@ exports an image** (upstream's `stage2/EXPORT_IMAGE` was deleted).
 
 ```
 common/common-setup.sh          sourced by both stages: monorepo clone, hardened
-                                cmdline, journald, BLE-only, hand script, VERSION.txt
+                                cmdline, journald, BLE-only, hand script,
+                                hostname-suffix, VERSION.txt
 stage-<variant>/00-<variant>/   00-packages, 00-run.sh (host side), 01-run-chroot.sh
                                 (uv venv + import check + enable), files/
 ```
@@ -64,13 +70,37 @@ stage. Set `OS_NAME` **before** sourcing `common-setup.sh`.
 - **HAND comes from the hostname** (`<device>-left|right`), derived on first service
   start by `ExecStartPre=+/usr/local/bin/hand-from-hostname <env-file> <VAR>`.
   It is **append-only** to `/etc/<device>/env` and guarded by a `grep`, because
-  calibration (`calibrate_zero_local.py`, `calibrate_angles.py`) appends to the
-  same file later. Never rewrite that file from a build or boot script.
+  per-device lines land in the same file later (gripette's
+  `calibrate_zero_local.py` motor offsets, grabette's `GRABETTE_*_SIGN`
+  overrides). Never rewrite that file from a build or boot script. grabette's
+  angle calibration lives elsewhere, in `~pollen/.grabette/angle_calibration.json`.
+  **Exception: grabetteos bakes `GRABETTE_HAND=right`** into its initial env
+  (2026-10-12, decided: no left/right selection yet), so the hand script is a
+  no-op there and the service starts on first boot. That gives up fail-closed:
+  a left grabette records as right until its line is changed. gripetteos still
+  derives the hand from the hostname.
 - **`files/*.service` are copies** of `packages/*/systemd/*.service` with `User=`,
   paths and the `ExecStartPre` hook changed. When the monorepo units change, port
   it here by hand. Same for the Makefile-derived bits (udev rule, polkit rules,
-  sudoers, timesyncd) — `config.txt` and `timesyncd-grabette.conf` are currently
-  byte-identical copies of the monorepo files; keep them that way.
+  sudoers, timesyncd, the Orbbec udev rule the Makefile writes inline) —
+  `config.txt` and `timesyncd-grabette.conf` are byte-identical copies of the
+  monorepo files; keep them that way (`config.txt` once drifted and silently
+  left the HAT speaker disabled). Files that need no adaptation are **not**
+  copied but installed from the baked checkout in `01-run-chroot.sh` (speaker
+  overlay, `aic3104-init.sh`/`.service`), so they cannot drift.
+- **Every `make install-*` target must have an equivalent in the stage.**
+  Nothing here runs `make`; a target added in the monorepo is silently missing
+  from the image until ported. grabette covers install-rpi (incl.
+  install-orbbec-sdk), install-udev (both cameras), install-ntp, install-netdev,
+  install-poweroff, install-audio (minus `/etc/asound.conf`, written only once
+  the card exists), install-systemd. gripette: install-rpi, enable-uart,
+  harden-rpi, install-systemd, install-web (installed, not enabled).
+- **Hostnames carry a per-device suffix.** `hostname-suffix` appends the low
+  digits of the Pi serial to the baked name on first boot (`grabette-1f9a2b`) so
+  units of one variant don't collide on a network — including hand-less variants
+  like casquette. It acts only while the hostname has no hyphen, so it can never
+  append twice or overwrite a name someone chose. `hand-from-hostname` globs
+  `*left*`/`*right*`, which hex can never spell, so the suffix is invisible to it.
 - A stage script **without the exec bit is silently skipped** by pi-gen. `chmod +x`
   every new `*-run.sh`. `on_chroot` heredocs need `<<-` with real tab indentation.
 
@@ -80,13 +110,30 @@ stage. Set `OS_NAME` **before** sourcing `common-setup.sh`.
   `BASE_DIR` exists, and `set -u` kills the build otherwise.
 - New env vars consumed by a stage must be added to `build-docker.sh`'s `docker run
   -e` list, or Docker builds silently see them empty.
+- `dtparam=i2c_arm=on` / the i2c3,i2c4 overlays only create kernel buses; the
+  `/dev/i2c-N` nodes need `i2c-dev` (`/etc/modules-load.d/i2c-dev.conf`, what
+  raspi-config adds on a manual bring-up). Every image before 2026-10-08 lacked
+  it — `verify-image.sh` never boots a kernel, so only `grabetteos_check` on a
+  device catches this class of bug.
+- journald drop-ins in `/etc` and `/usr/lib` merge **by filename**:
+  raspberrypi-sys-mods ships `40-rpi-volatile-storage.conf` (`Storage=volatile`),
+  so ours is `90-journald-persistent.conf`. Before 2026-10-12 it was `10-…` and
+  lost — no image kept logs across reboots. `verify-image.sh` now checks the
+  effective value (`systemd-analyze cat-config`), not just our file.
+- `build-docker.sh` on an x86 host looks up `qemu-aarch64` by that exact name;
+  Ubuntu's `qemu-user-static` only ships `qemu-aarch64-static` (its binfmt
+  handler, flags `F`, is what actually matters). A symlink named `qemu-aarch64`
+  early on `PATH` satisfies the check.
 - In the container: no `unzip` (use `bsdtar`), and `/dev` is a tmpfs so loop
   partition nodes must be `mknod`'d from `/sys/class/block` — `verify-image.sh`
   does both. `systemd-analyze verify` needs a writable `/tmp` (tmpfs over the
   read-only mount).
 - Benign build-log noise: `update-alternatives: error: no alternatives for mkvinfo`
   and dbus `system_bus_socket` failures. Both are chroot artifacts, not failures.
-- The clone uses `GIT_LFS_SKIP_SMUDGE=1` — device services don't need the meshes.
+- The clone uses `GIT_LFS_SKIP_SMUDGE=1`, then grabette's stage `git lfs pull`s
+  only `packages/grabette/urdf/**` (~70 MB): the dashboard's 3D viewer serves
+  those meshes, and a pointer file renders nothing while still returning 200.
+  The rest (CAD, PDFs, gripette URDF — unused by gripette's code) stays out.
 
 ## Relationship to upstream pi-gen
 
