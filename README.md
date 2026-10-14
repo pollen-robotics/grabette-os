@@ -11,12 +11,12 @@ Both images share: user `pollen`, the grabette monorepo clone at `/home/pollen/g
 
 ## Flashing a device
 
-Flash the matching image with Raspberry Pi Imager ("Use custom") and in the OS customisation settings:
+Download the matching `image_<date>-<variant>-<version>.zip` from the [latest release](https://github.com/pollen-robotics/grabette-os/releases/latest) and flash it with Raspberry Pi Imager ("Use custom"). The Imager offers no OS customisation for a custom image, and none is needed:
 
-- **Hostname: leave it unset.** On first boot `hostname-suffix` appends the low digits of the Pi serial to the baked name (`grabette-1f9a2b`), so several devices of one variant are distinguishable on a network without anyone naming them. A hostname you set yourself (any name with a hyphen) is left untouched.
-- **Hand.** grabetteos is a **right hand by default** (`GRABETTE_HAND=right` is baked into `/etc/grabette/env`); for a left grabette change that line and `sudo systemctl restart grabette`. gripetteos derives `GRIPPER_HAND` from a hostname containing `left` or `right` and writes it to `/etc/gripette/env`; any other hostname makes the service fail with an explicit journal message until you set it (`sudo hostnamectl set-hostname gripette-left-1f9a2b`) or set the variable manually.
-- **Username: leave it as `pollen`** (change only the password if you want). The image bakes services and the venv under `/home/pollen`; a renamed user breaks it.
-- WiFi and SSH: as usual.
+- **Hostname.** On first boot `hostname-suffix` appends the low digits of the Pi serial to the baked name (`grabette-1f9a2b`), so several devices of one variant are distinguishable on a network without anyone naming them. A hostname you set yourself later (any name with a hyphen) is left untouched.
+- **WiFi.** Set it over BLE with the [Bluetooth tool](https://pollen-robotics.github.io/grabette/#wifi) (`grabette-bluetooth` / `gripette-bluetooth` run from first boot).
+- **SSH** is enabled, user `pollen`, password `root` (change it with `passwd`). Keep that username: the image bakes services and the venv under `/home/pollen`.
+- **Hand.** grabetteos is a **right hand by default** (`GRABETTE_HAND=right` is baked into `/etc/grabette/env`); for a left grabette change that line and `sudo systemctl restart grabette`. gripetteos derives `GRIPPER_HAND` from a hostname containing `left` or `right` and writes it to `/etc/gripette/env`; any other hostname makes the service fail with an explicit journal message until you set it (`sudo hostnamectl set-hostname gripette-left-1f9a2b && sudo systemctl restart gripette`) or set the variable manually.
 
 Per-device calibration stays a post-assembly step, appended to `/etc/<device>/env` or `~/.grabette/` (the hand script never rewrites those):
 - grabette: `packages/grabette/scripts/calibrate_angles.py` (angle sensors → `~/.grabette/angle_calibration.json`)
