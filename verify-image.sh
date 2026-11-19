@@ -52,15 +52,20 @@ echo "=== $VARIANT checks ==="
 if [ "$VARIANT" = gripette ]; then
     ck "config.txt: miniuart-bt"         grep -q '^\s*dtoverlay=miniuart-bt' $B/config.txt
     ck "config.txt: enable_uart=1"       grep -q '^enable_uart=1' $B/config.txt
-    ck "env defaults, no HAND yet"       bash -c "grep -q GRIPPER_CAMERA_MODE=video $R/etc/gripette/env && ! grep -q ^GRIPPER_HAND= $R/etc/gripette/env"
+    ck "env defaults to right hand"      bash -c "grep -q GRIPPER_CAMERA_MODE=video $R/etc/gripette/env && grep -c ^GRIPPER_HAND= $R/etc/gripette/env | grep -qx 1 && grep -qx GRIPPER_HAND=right $R/etc/gripette/env"
     ck "gripette.service baked"          grep -q 'User=pollen' $R/etc/systemd/system/gripette.service
     ck "gripette.service hand ExecStartPre" grep -q 'ExecStartPre=+/usr/local/bin/hand-from-hostname /etc/gripette/env GRIPPER_HAND' $R/etc/systemd/system/gripette.service
     ck "gripette enabled"                test -L $R/etc/systemd/system/multi-user.target.wants/gripette.service
     ck "gripette-bluetooth enabled"      test -L $R/etc/systemd/system/multi-user.target.wants/gripette-bluetooth.service
-    ckno "gripette-web NOT enabled"      test -L $R/etc/systemd/system/multi-user.target.wants/gripette-web.service
+    ck "gripette-web enabled"            test -L $R/etc/systemd/system/multi-user.target.wants/gripette-web.service
+    ck "gripette-web Nice=10"            grep -qx Nice=10 $R/etc/systemd/system/gripette-web.service
+    ck "bluetoothd no-MIDI drop-in"      grep -q -- '--noplugin=midi' $R/etc/systemd/system/bluetooth.service.d/no-midi.conf
+    ck "bluetoothd at drop-in path"      test -x $R/usr/libexec/bluetooth/bluetoothd
     ck "web sudoers 0440"                bash -c "stat -c%a $R/etc/sudoers.d/gripette-web | grep -qx 440"
     ck "check script"                    test -x $R/usr/local/bin/gripetteos_check
     ck "gripette pkg in venv"            ls -d $R/home/pollen/grabette/.venv/lib/python*/site-packages/gripette*
+    ck "viewer meshes present"           test -f $R/home/pollen/grabette/packages/gripette/urdf/gripette_right_viewer/robot.urdf
+    ckno "viewer meshes not LFS pointers" grep -rlq 'git-lfs.github.com/spec' $R/home/pollen/grabette/packages/gripette/urdf/gripette_left_viewer $R/home/pollen/grabette/packages/gripette/urdf/gripette_right_viewer
 else
     ck "config.txt: i2c3 overlay"        grep -q 'dtoverlay=i2c3,pins_4_5' $B/config.txt
     ck "config.txt: i2c4 overlay"        grep -q 'dtoverlay=i2c4,pins_8_9' $B/config.txt
@@ -105,6 +110,10 @@ ck "journald effective Storage=persistent" \
     chroot $R sh -c "systemd-analyze cat-config systemd/journald.conf | grep '^Storage=' | tail -1 | grep -qx Storage=persistent"
 ck "systemd-analyze verify units" \
     chroot $R systemd-analyze verify /etc/systemd/system/${VARIANT}.service /etc/systemd/system/${VARIANT}-bluetooth.service
+if [ "$VARIANT" = gripette ]; then
+    ck "gripette-web + bluetoothd drop-in verify" \
+        chroot $R systemd-analyze verify /etc/systemd/system/gripette-web.service bluetooth.service
+fi
 if [ "$VARIANT" = grabette ]; then
     ck "aic3104-init unit + script" \
         chroot $R sh -c "systemd-analyze verify /etc/systemd/system/aic3104-init.service && bash -n /usr/local/bin/aic3104-init.sh"

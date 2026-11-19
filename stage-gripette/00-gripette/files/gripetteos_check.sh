@@ -2,7 +2,7 @@
 # Quick GripetteOS sanity check. For the full hardware diagnostic
 # (camera capture + motor bus) run:  make -C ~/grabette/packages/gripette check
 rc=0
-for svc in gripette gripette-bluetooth; do
+for svc in gripette gripette-bluetooth gripette-web; do
     state=$(systemctl is-active "$svc" || true)
     echo "$svc: $state"
     [ "$state" = active ] || rc=1

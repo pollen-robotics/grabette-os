@@ -5,7 +5,7 @@ This repository builds the custom Raspberry Pi OS images (arm64) for the two dev
 | Image | Device | Bakes in |
 |---|---|---|
 | `grabetteos` | grabette (Pi 4) | apt deps (picamera2, ffmpeg, dbus/gi), uv workspace venv (`--extra rpi --extra ui --extra hf`), i2c3/i2c4 angle-sensor overlays, Gemini 305 SDK (`pyorbbecsdk2`) + udev rules for both depth cameras, HAT speaker overlay + `aic3104-init` mixer service, NTP pinned to a coordinated anycast service (multi-device recording sync), polkit WiFi scan/connect rules, poweroff sudoers, `grabette` + `grabette-bluetooth` services |
-| `gripetteos` | gripette (Pi Zero 2W) | apt deps (picamera2, dbus/gi), uv workspace venv (`--extra rpi`), UART on the PL011 (`dtoverlay=miniuart-bt`, no serial console) for the 1 Mbaud motor bus, web-UI sudoers, `gripette` + `gripette-bluetooth` services (`gripette-web` installed but opt-in) |
+| `gripetteos` | gripette (Pi Zero 2W) | apt deps (picamera2, dbus/gi), uv workspace venv (`--extra rpi`), UART on the PL011 (`dtoverlay=miniuart-bt`, no serial console) for the 1 Mbaud motor bus, web-UI sudoers, `gripette` + `gripette-bluetooth` + `gripette-web` (dashboard on port 8000, with its 3D viewer meshes), bluetoothd without its BLE MIDI plugin |
 
 Both images share: user `pollen`, the grabette monorepo clone at `/home/pollen/grabette`, crash hardening (persistent capped journal, `fsck.mode=force`), BLE-only Bluetooth, and HAND-from-hostname first-boot setup.
 
@@ -16,11 +16,11 @@ Download the matching `image_<date>-<variant>-<version>.zip` from the [latest re
 - **Hostname.** On first boot `hostname-suffix` appends the low digits of the Pi serial to the baked name (`grabette-1f9a2b`), so several devices of one variant are distinguishable on a network without anyone naming them. A hostname you set yourself later (any name with a hyphen) is left untouched.
 - **WiFi.** Set it over BLE with the [Bluetooth tool](https://pollen-robotics.github.io/grabette/#wifi) (`grabette-bluetooth` / `gripette-bluetooth` run from first boot).
 - **SSH** is enabled, user `pollen`, password `root` (change it with `passwd`). Keep that username: the image bakes services and the venv under `/home/pollen`.
-- **Hand.** grabetteos is a **right hand by default** (`GRABETTE_HAND=right` is baked into `/etc/grabette/env`); for a left grabette change that line and `sudo systemctl restart grabette`. gripetteos derives `GRIPPER_HAND` from a hostname containing `left` or `right` and writes it to `/etc/gripette/env`; any other hostname makes the service fail with an explicit journal message until you set it (`sudo hostnamectl set-hostname gripette-left-1f9a2b && sudo systemctl restart gripette`) or set the variable manually.
+- **Hand.** Both images are a **right hand by default** (`GRABETTE_HAND=right` in `/etc/grabette/env`, `GRIPPER_HAND=right` in `/etc/gripette/env`). For a left device change that line, then `sudo systemctl restart grabette` (grabette) or `sudo systemctl restart gripette gripette-web` (gripette: the dashboard reads the hand at start too).
 
 Per-device calibration stays a post-assembly step, appended to `/etc/<device>/env` or `~/.grabette/` (the hand script never rewrites those):
 - grabette: `packages/grabette/scripts/calibrate_angles.py` (angle sensors → `~/.grabette/angle_calibration.json`)
-- gripette: `packages/gripette/scripts/calibrate_zero_local.py` (motor offsets → `/etc/gripette/env`)
+- gripette: the [Bluetooth tool](https://pollen-robotics.github.io/grabette/?device=gripette#calibration)'s calibration step, or `packages/gripette/scripts/calibrate_zero_local.py` (motor offsets → `/etc/gripette/env`)
 
 Quick sanity check on the device: `grabetteos_check` / `gripetteos_check`. Full hardware diagnostic: `scripts/check_hardware.py` in the corresponding package (`make check` for gripette).
 
