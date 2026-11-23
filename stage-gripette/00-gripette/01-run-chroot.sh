@@ -10,6 +10,10 @@ echo 'export PATH=$PATH:/opt/uv' >> /home/pollen/.bashrc
 echo "Building the gripette venv (make install-rpi equivalent)..."
 chown -R pollen:pollen /home/pollen/grabette
 cd /home/pollen/grabette
+# The clone skips LFS, but the dashboard's 3D viewer serves the light viewer
+# meshes (/urdf/gripette_<hand>_viewer/): fetch those, both hands (a few MB).
+runuser -u pollen -- env HOME=/home/pollen \
+    git lfs pull --include="packages/gripette/urdf/*_viewer/**"
 # --system-site-packages so apt's picamera2/numpy satisfy the dependency tree
 # (PyPI picamera2 would otherwise pull a numpy build); numpy skipped for the
 # same reason — mirrors packages/gripette/Makefile install-rpi.
@@ -22,5 +26,5 @@ echo "Verifying imports (chroot-safe, touches no hardware)..."
 runuser -u pollen -- /home/pollen/grabette/.venv/bin/python \
     -c "import picamera2, serial, rustypot, gripette; print('all imports OK')"
 
-echo "Enabling gripette services (web stays opt-in)..."
-systemctl enable gripette gripette-bluetooth
+echo "Enabling gripette services (dashboard included, as make install-systemd)..."
+systemctl enable gripette gripette-bluetooth gripette-web

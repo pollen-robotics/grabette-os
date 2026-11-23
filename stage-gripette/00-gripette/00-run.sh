@@ -14,6 +14,11 @@ echo "Installing gripette systemd units..."
 install -m 0644 files/gripette.service files/gripette-bluetooth.service \
     files/gripette-web.service "${ROOTFS_DIR}/etc/systemd/system/"
 
+echo "Disabling bluetoothd's BLE MIDI plugin (ensure-ble-only equivalent)..."
+install -d -m 0755 "${ROOTFS_DIR}/etc/systemd/system/bluetooth.service.d"
+install -m 0644 files/bluetooth-no-midi.conf \
+    "${ROOTFS_DIR}/etc/systemd/system/bluetooth.service.d/no-midi.conf"
+
 echo "Installing /etc/gripette/env defaults..."
 install -d -m 0755 "${ROOTFS_DIR}/etc/gripette"
 install -m 0644 files/gripette-env "${ROOTFS_DIR}/etc/gripette/env"

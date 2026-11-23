@@ -9,7 +9,7 @@ Keep this file up to date.
 | Variant | Device | Image | Services enabled |
 |---|---|---|---|
 | `config.grabette` | grabette, Pi 4 | `grabetteos` (~1.6 GB) | `grabette`, `grabette-bluetooth` |
-| `config.gripette` | gripette, Pi Zero 2W | `gripetteos` (~1.3 GB) | `gripette`, `gripette-bluetooth` (`gripette-web` installed, opt-in) |
+| `config.gripette` | gripette, Pi Zero 2W | `gripetteos` (~1.3 GB) | `gripette`, `gripette-bluetooth`, `gripette-web` (dashboard, port 8000) |
 
 ## Build & test
 
@@ -74,11 +74,11 @@ stage. Set `OS_NAME` **before** sourcing `common-setup.sh`.
   `calibrate_zero_local.py` motor offsets, grabette's `GRABETTE_*_SIGN`
   overrides). Never rewrite that file from a build or boot script. grabette's
   angle calibration lives elsewhere, in `~pollen/.grabette/angle_calibration.json`.
-  **Exception: grabetteos bakes `GRABETTE_HAND=right`** into its initial env
-  (2026-10-12, decided: no left/right selection yet), so the hand script is a
-  no-op there and the service starts on first boot. That gives up fail-closed:
-  a left grabette records as right until its line is changed. gripetteos still
-  derives the hand from the hostname.
+  **Exception: both images bake a right hand** into their initial env
+  (`GRABETTE_HAND=right` 2026-10-12, `GRIPPER_HAND=right` 2026-11-19; decided:
+  no left/right selection in the UI yet), so the hand script is a no-op there
+  and the services start on first boot. That gives up fail-closed: a left
+  device runs as right until its line is changed.
 - **`files/*.service` are copies** of `packages/*/systemd/*.service` with `User=`,
   paths and the `ExecStartPre` hook changed. When the monorepo units change, port
   it here by hand. Same for the Makefile-derived bits (udev rule, polkit rules,
@@ -94,7 +94,8 @@ stage. Set `OS_NAME` **before** sourcing `common-setup.sh`.
   install-orbbec-sdk), install-udev (both cameras), install-ntp, install-netdev,
   install-poweroff, install-audio (minus `/etc/asound.conf`, written only once
   the card exists), install-systemd. gripette: install-rpi, enable-uart,
-  harden-rpi, install-systemd, install-web (installed, not enabled).
+  harden-rpi, ensure-ble-only (incl. the bluetoothd no-MIDI drop-in; its
+  WirePlumber half has nothing to act on in Lite), install-systemd, install-web.
 - **Hostnames carry a per-device suffix.** `hostname-suffix` appends the low
   digits of the Pi serial to the baked name on first boot (`grabette-1f9a2b`) so
   units of one variant don't collide on a network — including hand-less variants
@@ -130,10 +131,11 @@ stage. Set `OS_NAME` **before** sourcing `common-setup.sh`.
   read-only mount).
 - Benign build-log noise: `update-alternatives: error: no alternatives for mkvinfo`
   and dbus `system_bus_socket` failures. Both are chroot artifacts, not failures.
-- The clone uses `GIT_LFS_SKIP_SMUDGE=1`, then grabette's stage `git lfs pull`s
-  only `packages/grabette/urdf/**` (~70 MB): the dashboard's 3D viewer serves
-  those meshes, and a pointer file renders nothing while still returning 200.
-  The rest (CAD, PDFs, gripette URDF — unused by gripette's code) stays out.
+- The clone uses `GIT_LFS_SKIP_SMUDGE=1`, then each stage `git lfs pull`s only
+  what its dashboard's 3D viewer serves: grabette `packages/grabette/urdf/**`
+  (~70 MB), gripette `packages/gripette/urdf/*_viewer/**` (a few MB). A pointer
+  file renders nothing while still returning 200. The rest (CAD, PDFs, the
+  full gripette URDF) stays out.
 
 ## Relationship to upstream pi-gen
 
