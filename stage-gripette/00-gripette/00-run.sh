@@ -19,6 +19,9 @@ install -d -m 0755 "${ROOTFS_DIR}/etc/systemd/system/bluetooth.service.d"
 install -m 0644 files/bluetooth-no-midi.conf \
     "${ROOTFS_DIR}/etc/systemd/system/bluetooth.service.d/no-midi.conf"
 
+echo "Hiding WPA3 from brcmfmac (WPA2/WPA3 transition networks, rpi linux#7634)..."
+install -m 0644 files/rpi-brcmfmac.conf "${ROOTFS_DIR}/etc/modprobe.d/rpi-brcmfmac.conf"
+
 echo "Installing /etc/gripette/env defaults..."
 install -d -m 0755 "${ROOTFS_DIR}/etc/gripette"
 install -m 0644 files/gripette-env "${ROOTFS_DIR}/etc/gripette/env"

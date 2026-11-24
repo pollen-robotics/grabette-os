@@ -96,6 +96,10 @@ stage. Set `OS_NAME` **before** sourcing `common-setup.sh`.
   the card exists), install-systemd. gripette: install-rpi, enable-uart,
   harden-rpi, ensure-ble-only (incl. the bluetoothd no-MIDI drop-in; its
   WirePlumber half has nothing to act on in Lite), install-systemd, install-web.
+- **gripette hides WPA3 from brcmfmac** (`/etc/modprobe.d/rpi-brcmfmac.conf`,
+  image-only, no Makefile twin). The Zero 2W cannot finish SAE, so WPA2/WPA3
+  transition networks time out ([raspberrypi/linux#7634](https://github.com/raspberrypi/linux/issues/7634)).
+  The mask is kernel-specific: `verify-image.sh` fails if the kernel leaves 6.18.
 - **Hostnames carry a per-device suffix.** `hostname-suffix` appends the low
   digits of the Pi serial to the baked name on first boot (`grabette-1f9a2b`) so
   units of one variant don't collide on a network — including hand-less variants
