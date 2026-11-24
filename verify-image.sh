@@ -61,6 +61,9 @@ if [ "$VARIANT" = gripette ]; then
     ck "gripette-web Nice=10"            grep -qx Nice=10 $R/etc/systemd/system/gripette-web.service
     ck "bluetoothd no-MIDI drop-in"      grep -q -- '--noplugin=midi' $R/etc/systemd/system/bluetooth.service.d/no-midi.conf
     ck "bluetoothd at drop-in path"      test -x $R/usr/libexec/bluetooth/bluetoothd
+    ck "brcmfmac WPA3 mask"              grep -qx 'options brcmfmac roamoff=1 feature_disable=0x2282000' $R/etc/modprobe.d/rpi-brcmfmac.conf
+    # The mask's bit 25 is SAE_EXT on 6.18 only: a new kernel series must re-check it.
+    ck "brcmfmac mask matches kernel 6.18" bash -c "ls -d $R/lib/modules/6.18.*+rpt-rpi-* >/dev/null && ! ls -d $R/lib/modules/* | grep -qv '/6\.18\.'"
     ck "web sudoers 0440"                bash -c "stat -c%a $R/etc/sudoers.d/gripette-web | grep -qx 440"
     ck "check script"                    test -x $R/usr/local/bin/gripetteos_check
     ck "gripette pkg in venv"            ls -d $R/home/pollen/grabette/.venv/lib/python*/site-packages/gripette*
